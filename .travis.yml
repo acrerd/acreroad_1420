@@ -9,7 +9,34 @@ python:
   - "2.6"
   - "pypy"
 
+os:
+    - linux
+    - osx
+
+
+
+matrix:
+    include:
+         - os: linux
+           env: NUMPY_VERSION=1.8.1
+         - os: linux
+           env: PANDAS_VERSION=0.15.2
+         - os: linux
+           env: TEST_MODE='astropy-dev'
+         - os: linux
+           env: TEST_MODE='sphinx'
+         - os: linux
+           env: TEST_MODE='online'
+         - os: linux
+           env: TEST_MODE='doctest'
+
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+
+
+before_install:
+   - source continuous-integration/travis/install_$TRAVIS_OS_NAME.sh
+
+
 install:
    - conda install --yes pip    
    - conda install -q --yes numpy=$NUMPY_VERSION
