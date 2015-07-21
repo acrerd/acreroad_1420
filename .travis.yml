@@ -39,7 +39,7 @@ before_install:
 
 install:
    - conda install --yes pip    
-   - conda install -q --yes numpy=$NUMPY_VERSION
+   - conda install -q --yes numpy=1.8.1
    - conda install --yes pip
    - conda install -q --yes astropy=1.0.3
 
