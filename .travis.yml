@@ -11,11 +11,11 @@ python:
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
-	- conda create --yes -n test python=$PYTHON_VERSION
-	- conda install --yes pip    
-	- conda install -q --yes numpy=$NUMPY_VERSION
-	- conda install --yes pip
-	- conda install -q --yes astropy=1.0.3
+   - conda create --yes -n test python=$PYTHON_VERSION
+   - conda install --yes pip    
+   - conda install -q --yes numpy=$NUMPY_VERSION
+   - conda install --yes pip
+   - conda install -q --yes astropy=1.0.3
 
 # command to run tests, e.g. python setup.py test
 script: python setup.py test
