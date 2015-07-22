@@ -139,7 +139,8 @@ class Drive():
         Parameters
         ----------
         skycoord : astropy.SkyCoord object
-           An astropy SkyCoord object which contains the sky location to slew to. This can also be a list of locations which the telescope will slew to sequentially. 
+           An astropy SkyCoord object which contains the sky location to slew to.
+           This can also be a list of locations which the telescope will slew to sequentially. 
 
         """
 
@@ -167,5 +168,12 @@ class Drive():
             return self._command(command_str)
         else:
             raise ControllerError("The telescope has failed to slew to the requested location")
+
+    def home(self):
+        """
+        Slews the telescope to the home position.
+
         
-    
+        """
+        command_str = "gh"
+        return self._command(command_str)

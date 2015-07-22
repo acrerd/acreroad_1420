@@ -43,7 +43,9 @@ class TestDrive(unittest.TestCase):
         c = SkyCoord(frame="galactic", l="1h12m43.2s", b="+1d12m43s")
 
         self.assertEqual(self.connection.goto(c), 1)
-        
+
+    def testHome(self):
+        self.assertEqual(self.connection.home(), 1)
         
     def tearDown(self):
         pass
