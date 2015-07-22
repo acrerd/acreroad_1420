@@ -8,5 +8,5 @@ drives via an Arduino Due-based controller which runs qp
 
 Drive
 =====
-.. automodule:: acreroad_1420.drive
+.. autoclass:: acreroad_1420.drive.Drive
    :members:
