@@ -184,6 +184,23 @@ class Drive():
     def status(self):
         """
         Returns a dictionary describing the status of the telescope (e.g. its location).
+
+        Returns
+        -------
+        dict
+           A dictionary containing the right ascension, declination, altitude, and azimuth of the telescope.
+
+        Examples
+        --------
+
+        >>> from astropy.coordinates import SkyCoord
+        >>> from astropy.coordinates import ICRS, 
+
+        >>> c = SkyCoord(frame="galactic", l="1h12m43.2s", b="+1d12m43s")
+
+        >>> self.connection.goto(c)
+
+        >>> ra = self.connection.status()['ra'].value
         
         """
         return {'ra':self.ra, 'dec': self.dec, 'alt':0, 'az':0}
