@@ -26,13 +26,16 @@ simulate : bool
 
 import re, datetime
 
+import astropy
+from astropy.coordinates import SkyCoord, ICRS
+
 class Drive():
 
     sim = 0
 
     # String formats
 
-    com_format = re.compile("[A-Za-z]{1,2} ? ([-+]?[0-9]{0,4}\.[0-9]{0,8} ?){0,6}") # general command string format
+    com_format = re.compile("[A-Za-z]{1,2} ?([-+]?[0-9]{0,4}\.[0-9]{0,8} ?){0,6}") # general command string format
     cal_format = re.compile("[0-9]{3} [0-9]{3}") # calibration string format
     
 
@@ -107,12 +110,11 @@ class Drive():
 
         # Construct the command
         command_str = "T {} {} {} {}".format(latitude, longitude, dlat, dlon)
-        print command_str
         return self._command(command_str)
 
     def goto(self, skycoord):
         """
-        Moves the telescope to point at a given sky location.
+        Moves the telescope to point at a given sky location, and then commands the drive to track the point.
 
         Parameters
         ----------
@@ -120,6 +122,30 @@ class Drive():
            An astropy SkyCoord object which contains the sky location to slew to. This can also be a list of locations which the telescope will slew to sequentially. 
 
         """
-        pass
+
+        if not type(skycoord)==astropy.coordinates.sky_coordinate.SkyCoord:
+            raise ValueError("The sky coordinates provided aren't an astropy SkyCoord object!'")
+
+        # We need to make sure that we send RA and DEC values to the
+        # controller (it is theoretically possible to do ALTAZ too,
+        # but let's start simple, eh?')
+
+        skycoord = skycoord.transform_to(frame=ICRS)
+        ra  = skycoord.ra
+        dec = skycoord.dec
+        
+        # construct a command string
+        command_str = "gE {} {}".format(ra, dec)
+        # pass the slew-to command to the controller
+        if self._command(command_str):
+            # We need to do more here than just check the command has
+            # passed successfully; we need to check the telescope is
+            # (or thinks it is) pointing where we asked.
+            
+            # If the command completes then set the controller to track the object
+            command_str = "ts"
+            return self._command(command_str)
+        else:
+            raise ControllerError("The telescope has failed to slew to the requested location")
         
     

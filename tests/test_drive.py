@@ -34,7 +34,7 @@ class TestDrive(unittest.TestCase):
         from astropy.coordinates import Angle, Latitude, Longitude
         import astropy.units as u
 
-        c = SkyCoord("galactic", l="1h12m43.2s", b="+1d12m43s")
+        c = SkyCoord(frame="galactic", l="1h12m43.2s", b="+1d12m43s")
 
         self.assertEqual(self.connection.goto(c), 1)
         
