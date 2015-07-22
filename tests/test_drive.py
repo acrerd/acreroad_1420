@@ -28,6 +28,12 @@ class TestDrive(unittest.TestCase):
     def testLocationSet(self):
         self.assertEqual(self.connection.setLocation(), 1)
 
+    def testLocationProvidedSet(self):
+        from astropy.coordinates import EarthLocation
+        import astropy.units as u
+        bear_mountain = EarthLocation(lat=41.3*u.deg, lon=-74*u.deg, height=390*u.m)
+        self.assertEqual(self.connection.setLocation(bear_mountain), 1)
+
     def testGotoSingle(self):
         from astropy.coordinates import SkyCoord
         from astropy.coordinates import ICRS, Galactic, FK4, FK5

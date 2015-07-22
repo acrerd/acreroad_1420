@@ -27,11 +27,13 @@ simulate : bool
 import re, datetime
 
 import astropy
-from astropy.coordinates import SkyCoord, ICRS
+from astropy.coordinates import SkyCoord, ICRS, EarthLocation
+import astropy.units as u
 
 class Drive():
 
     sim = 0
+    acre_road = EarthLocation(lat=55.9024278*u.deg, lon=-4.307582*u.deg, height=61*u.m)
 
     # String formats
 
@@ -41,6 +43,26 @@ class Drive():
 
     
     def __init__(self, device, port, simulate):
+        """
+        Software designed to drive the 1420 MHz telescope on the roof of the
+        Acre Road observatory. This class interacts with "qp", the telescope
+        drive software by Norman Gray (https://bitbucket.org/nxg/qp) via a
+        serial (USB) interface.
+
+        The serial interfacing is done through pySerial.
+
+        Parameters
+        ----------
+
+        device : str
+           The name of the unix device which the drive is connected to
+        port : int
+           The port number of the drive
+        simulate : bool
+           A boolean flag to set the drive in simulation mode
+           (the class does not connect to the controller in simulation mode)
+
+        """
         self.sim = simulate
         pass
 
@@ -91,22 +113,20 @@ class Drive():
 
         return self._command(command_str)
 
-    def setLocation(self, latitude=None, longitude=None, dlat=0, dlon=0):
+    def setLocation(self, location=None, dlat=0, dlon=0):
         """
         Sets the location of the telescope.
 
         Parameters
         ----------
-        latitude : float
-           The latitude of the telescope (in degrees)
-        longitude : float
-           The longitude of the telescope (in degrees)
+        location : astropy.coordinates.EarthLocation object
         """
-        if not latitude and not longitude:
+        if not location:
             # Assume we're at Acre Road, in Glasgow
-            latitude, longitude = 55.9024278, -4.307582
-        elif not latitude or not longitude:
-            raise ValueError("Cannot work out location from information provided!")
+            location = self.acre_road
+
+        latitude  = location.latitude
+        longitude = location.longitude    
 
         # Construct the command
         command_str = "T {} {} {} {}".format(latitude, longitude, dlat, dlon)
