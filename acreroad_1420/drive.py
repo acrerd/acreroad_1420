@@ -195,11 +195,8 @@ class Drive():
 
         >>> from astropy.coordinates import SkyCoord
         >>> from astropy.coordinates import ICRS, 
-
         >>> c = SkyCoord(frame="galactic", l="1h12m43.2s", b="+1d12m43s")
-
         >>> self.connection.goto(c)
-
         >>> ra = self.connection.status()['ra'].value
         
         """
