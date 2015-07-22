@@ -42,7 +42,7 @@ class Drive():
     
 
     
-    def __init__(self, device, port, simulate):
+    def __init__(self, device, port, simulate, calibration=None, location=None):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -61,9 +61,23 @@ class Drive():
         simulate : bool
            A boolean flag to set the drive in simulation mode
            (the class does not connect to the controller in simulation mode)
+        calibration : str
+           The calibration figures which have been returned by a previous run of the *calibrate()* method.
+           The default is `None` which forces a calibration run to be carried-out.
+        location : astropy.coordinates.EarthLocation object
+           The Earth location of the telescope. The default is `None`, which sets the location as Acre Road Observatory, Glasgow.
 
+        Examples
+        --------
+        
+        >>> from acreroad_1420 import drive
+        >>> connection = drive.Drive('/dev/tty.usbserial', 9600, simulate=1)
+        
         """
         self.sim = simulate
+        self.calibrate(calibration)
+        self.setTime()
+        self.setLocation(location)
         pass
 
     def _command(self, string):
