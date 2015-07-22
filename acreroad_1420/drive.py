@@ -162,6 +162,9 @@ class Drive():
             # We need to do more here than just check the command has
             # passed successfully; we need to check the telescope is
             # (or thinks it is) pointing where we asked.
+            if self.sim:
+                self.ra  = ra
+                self.dec = dec
             
             # If the command completes then set the controller to track the object
             command_str = "ts"
@@ -177,3 +180,10 @@ class Drive():
         """
         command_str = "gh"
         return self._command(command_str)
+
+    def status(self):
+        """
+        Returns a dictionary describing the status of the telescope (e.g. its location).
+        
+        """
+        return {'ra':self.ra, 'dec': self.dec, 'alt':0, 'az':0}

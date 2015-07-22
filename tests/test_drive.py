@@ -10,6 +10,11 @@ Tests for the acreroad_1420.drive module
 
 import unittest
 
+from astropy.coordinates import SkyCoord
+from astropy.coordinates import ICRS, Galactic, FK4, FK5
+from astropy.coordinates import Angle, Latitude, Longitude
+import astropy.units as u
+
 from acreroad_1420 import drive
 
 class TestDrive(unittest.TestCase):
@@ -35,15 +40,20 @@ class TestDrive(unittest.TestCase):
         self.assertEqual(self.connection.setLocation(bear_mountain), 1)
 
     def testGotoSingle(self):
-        from astropy.coordinates import SkyCoord
-        from astropy.coordinates import ICRS, Galactic, FK4, FK5
-        from astropy.coordinates import Angle, Latitude, Longitude
-        import astropy.units as u
 
         c = SkyCoord(frame="galactic", l="1h12m43.2s", b="+1d12m43s")
 
         self.assertEqual(self.connection.goto(c), 1)
 
+    def testStatusRADEC(self):
+        c = SkyCoord(frame="galactic", l="1h12m43.2s", b="+1d12m43s")
+
+        self.connection.goto(c)
+
+        c = c.transform_to(frame=ICRS)
+        
+        self.assertEqual(self.connection.status()['ra'].value, c.ra.value)
+        
     def testHome(self):
         self.assertEqual(self.connection.home(), 1)
         
