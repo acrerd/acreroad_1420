@@ -18,6 +18,8 @@ Contents:
    authors
    history
 
+   drive
+
 Indices and tables
 ==================
 

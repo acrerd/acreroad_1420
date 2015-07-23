@@ -29,6 +29,7 @@ import re, datetime
 import astropy
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation
 import astropy.units as u
+import serial
 
 class Drive():
 
@@ -42,7 +43,7 @@ class Drive():
     
 
     
-    def __init__(self, device, port, simulate, calibration=None, location=None):
+    def __init__(self, device, baud, timeout=2, simulate=0, calibration=None, location=None):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -56,8 +57,10 @@ class Drive():
 
         device : str
            The name of the unix device which the drive is connected to
-        port : int
-           The port number of the drive
+        baud : int
+           The baud-rate of the connection.
+        timeout : int
+           The time, in seconds, to wait before timing-out. Default is 2 seconds.
         simulate : bool
            A boolean flag to set the drive in simulation mode
            (the class does not connect to the controller in simulation mode)
@@ -75,10 +78,17 @@ class Drive():
         
         """
         self.sim = simulate
+
+        # Initialise the connection
+        if not self.sim: self._openconnection(device, baud)
+        
         self.calibrate(calibration)
         self.setTime()
         self.setLocation(location)
         pass
+
+    def _openconnection(self, device, baud):
+        self.ser = serial.Serial(device, baud)
 
     def _command(self, string):
         """
@@ -95,6 +105,10 @@ class Drive():
         
         if self.sim:
             print("In simulation mode, command ignored.")
+            return 1
+        else:
+            # Pass the command to the Arduino via pyserial
+            ser.write(string.encode('ascii'))
             return 1
         
         
@@ -161,6 +175,9 @@ class Drive():
         if not type(skycoord)==astropy.coordinates.sky_coordinate.SkyCoord:
             raise ValueError("The sky coordinates provided aren't an astropy SkyCoord object!'")
 
+        # To do : We need to make sure that this behaves nicely with a
+        # list of coordinates as well as single ones.
+
         # We need to make sure that we send RA and DEC values to the
         # controller (it is theoretically possible to do ALTAZ too,
         # but let's start simple, eh?')
@@ -184,7 +201,7 @@ class Drive():
             command_str = "ts"
             return self._command(command_str)
         else:
-            raise ControllerError("The telescope has failed to slew to the requested location")
+            raise ControllerException("The telescope has failed to slew to the requested location")
 
     def home(self):
         """
@@ -215,3 +232,7 @@ class Drive():
         
         """
         return {'ra':self.ra, 'dec': self.dec, 'alt':0, 'az':0}
+
+
+class ControllerException(Exception):
+    pass
