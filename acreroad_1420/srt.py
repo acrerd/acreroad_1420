@@ -1,5 +1,6 @@
 import time, astropy
 from PyQt4 import QtGui
+from drive import Drive
 
 class Status:
     INIT = 0
@@ -20,15 +21,17 @@ class Mode:
 class SRT():
    
     def __init__(self,mode):
-        self.pos = (80,130)
+        device = ""
+        baud = 9600
+        self.drive = Drive(device,baud,simulate=1)
+        self.pos = azalt()
         self.status = Status.INIT
-        self.init() # initialise comms with arduino, instantiate pos vars, etc
         self.mode = mode
 
-    def init(self):
-        pass
-
     def getCurrentPos(self):
+        """
+        Returns current position in azalt.
+        """
         return self.pos
         
     def setCurrentPos(self, pos):
@@ -39,6 +42,18 @@ class SRT():
 
     def setMode(self,mode):
         self.mode = mode
+
+    def azalt(self):
+        status = self.drive.status()
+        ra,dec = status['ra'],status['dec']
+        az,alt = status['az'],status['alt']
+        return (az,alt)
+
+    def radec(self):
+        status = self.drive.status()
+        ra,dec = status['ra'],status['dec']
+        az,alt = status['az'],status['alt']
+        return (ra,dec)
 
     def calibrate():
         pass
@@ -83,7 +98,17 @@ class SRT():
                     time.sleep(delay)
         else:
             # This is where live code goes
-            pass
+            # remember self.getCurrentPos() is now in degrees in azalt or radec - NOT pixel coordinates.
+            print("Slewing in live mode.")
+            (x,y) = pos # target - mouse click position in pixels
+            (cx,cy) = self.pos
+            print("Target Pos: (" + str(skymap.pixelToDegreeX(x)) + "," + str(skymap.pixelToDegreeY(y)) + ")")
+            print("Current Pos: (" + str(skymap.pixelToDegreeX(cx)) + "," + str(skymap.pixelToDegreeY(cy)) + ")")
+            # construct a SkyCoord in correct coordinate frame.
+            self.drive.goto(skycoord)
+            skymap.setCurrentPos() # for updating onscreen position
+            skymap.update()
+            QtGui.QApplication.processEvents()
         print("Finished slewing to " + str(skymap.pixelToDegree(self.getCurrentPos())))
         self.status = Status.READY
         
