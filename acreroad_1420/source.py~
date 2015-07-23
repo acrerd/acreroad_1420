@@ -1,0 +1,56 @@
+import astropy
+from astropy.time import Time
+from astropy import units as u
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+import time
+
+
+class Source():
+    """
+    A container class for a radio source - holds position and other relevant information given by astropy.
+    """
+    def __init__(self,name):
+        self.pos = (0,0)
+        self.name = name
+        self.acreRoad = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+
+
+        #acre_road = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+        #now = Time(time.time(),format='unix')
+        #altazframe = AltAz(obstime=now, location=acre_road)
+        #sunaltaz = get_sun(now).transform_to(altazframe)
+        #alt = float(sunaltaz.alt.degree)
+        #az = float(sunaltaz.az.degree)
+
+
+    def lookupAstropy(self):
+        """
+        Searches for the source CDS name to get current position in AltAz relative to Acre Road.
+        """
+        source = SkyCoord.from_name(self.name)
+        if not type(source) == astropy.coordinates.sky_coordinate.SkyCoord:
+            raise ValueError("Unable to construct SkyCoord from name given.")
+        else:
+            now = Time(time.time(),format='unix')
+            altazframe = AltAz(obstime=now,location=self.acreRoad)
+            sourcealtaz = source.transform_to(altazframe)
+            self.pos = (float(sourcealtaz.alt.degree),float(sourcealtaz.az.degree))
+
+    def update(self):
+        """
+        Update current position of the source.
+        """
+        now = Time(time.time(),format='unix')
+        altazframe = AltAz(obstime=now,location=self.acreRoad)
+
+    def getPos(self):
+        return self.pos
+
+    def setPos(self,pos):
+        self.pos = pos
+        
+    def getName(self):
+        return self.name
+
+    def setName(self,name):
+        self.name = name
