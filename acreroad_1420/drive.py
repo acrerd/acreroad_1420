@@ -109,7 +109,11 @@ class Drive():
         else:
             # Pass the command to the Arduino via pyserial
             ser.write(string.encode('ascii'))
-            return 1
+
+            # Retrieve the return message from the controller
+            ret_line =  ser.readline()
+            if ret_line: return ret_line
+            else : return 1
         
         
     def calibrate(self, values=None):
