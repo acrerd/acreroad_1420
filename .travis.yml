@@ -26,6 +26,8 @@ install:
    - conda install -q --yes numpy=1.8.1
    - conda install --yes pip
    - conda install -q --yes astropy=1.0.3
+   - pip install pyserial
+
 
 # command to run tests, e.g. python setup.py test
 script: python setup.py test
