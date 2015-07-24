@@ -36,6 +36,10 @@ class Drive():
     sim = 0
     acre_road = EarthLocation(lat=55.9024278*u.deg, lon=-4.307582*u.deg, height=61*u.m)
 
+    # Position variables
+    ra = 0
+    dec = 0
+
     # String formats
 
     com_format = re.compile("[A-Za-z]{1,2} ?([-+]?[0-9]{0,4}\.[0-9]{0,8} ?){0,6}") # general command string format
