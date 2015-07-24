@@ -109,6 +109,7 @@ class SRT():
             skymap.setCurrentPos() # for updating onscreen position
             skymap.update()
             QtGui.QApplication.processEvents()
+            #test
         print("Finished slewing to " + str(skymap.pixelToDegree(self.getCurrentPos())))
         self.status = Status.READY
         
