@@ -23,8 +23,11 @@ class SRT():
     def __init__(self,mode):
         device = ""
         baud = 9600
-        self.drive = Drive(device,baud,simulate=1)
-        self.pos = azalt()
+        if mode == Mode.SIM:
+            self.drive = Drive(device,baud,simulate=1)
+        elif mode == Mode.LIVE:
+            self.drive = Drive(device,baud,simulate=0)
+        self.pos = self.azalt()
         self.status = Status.INIT
         self.mode = mode
 
@@ -44,30 +47,40 @@ class SRT():
         self.mode = mode
 
     def azalt(self):
+        """
+        Returns the azimuth and altitude of the SRT by calling the status() method of the drive class.
+        """
         status = self.drive.status()
-        ra,dec = status['ra'],status['dec']
         az,alt = status['az'],status['alt']
         return (az,alt)
 
     def radec(self):
+        """
+        Returns the right ascention and declination of the SRT by calling the status() method of the drive class.
+        """
         status = self.drive.status()
         ra,dec = status['ra'],status['dec']
-        az,alt = status['az'],status['alt']
         return (ra,dec)
 
     def calibrate():
         pass
 
     def slew(self,skymap,pos):
-        """Slews to position pos in pixel coordinates."""
+        """
+        Slews to position pos in degrees.
+        """
         delay = 0.01
         self.status = Status.SLEWING
         if self.mode == Mode.SIM:
             print("Slewing in sim mode.")
-            (x,y) = pos
-            (cx,cy) = self.pos
-            print("Target Pos: (" + str(skymap.pixelToDegreeX(x)) + "," + str(skymap.pixelToDegreeY(y)) + ")")
-            print("Current Pos: (" + str(skymap.pixelToDegreeX(cx)) + "," + str(skymap.pixelToDegreeY(cy)) + ")")
+            (xf,yf) = pos # target position in degrees
+            x = int(xf)
+            y = int(yf)
+            (cxf,cyf) = self.pos # current position in degrees
+            cx = int(cxf)
+            cy = int(cyf)
+            #print("Target Pos: (" + str(x) + "," + str(y) + ")")
+            #print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             if x < cx:
                 for i in reversed(range(x,cx)):
                     self.setCurrentPos((i,cy))
@@ -101,16 +114,16 @@ class SRT():
             # remember self.getCurrentPos() is now in degrees in azalt or radec - NOT pixel coordinates.
             print("Slewing in live mode.")
             (x,y) = pos # target - mouse click position in pixels
-            (cx,cy) = self.pos
+            (cx,cy) = self.pos # current position in degrees.
             print("Target Pos: (" + str(skymap.pixelToDegreeX(x)) + "," + str(skymap.pixelToDegreeY(y)) + ")")
-            print("Current Pos: (" + str(skymap.pixelToDegreeX(cx)) + "," + str(skymap.pixelToDegreeY(cy)) + ")")
+            print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             # construct a SkyCoord in correct coordinate frame.
             self.drive.goto(skycoord)
             skymap.setCurrentPos() # for updating onscreen position
             skymap.update()
             QtGui.QApplication.processEvents()
             #test again
-        print("Finished slewing to " + str(skymap.pixelToDegree(self.getCurrentPos())))
+        print("Finished slewing to " + str(self.getCurrentPos()))
         self.status = Status.READY
         
     def stow(self,pos=(0,90)):
@@ -122,14 +135,5 @@ class SRT():
     def setStatus(self,status):
         self.status = status
 
-    def sendCommand():
-        pass
-
-    def parseCommand():
-        pass
-
-    def simulationMode():
-        pass
-        
     def track():
         pass

@@ -24,8 +24,8 @@ class Skymap(QtGui.QWidget):
         self.coordinateSystem = CoordinateSystem.AZEL
         self.srt = self.parent().getSRT()
 
-        self.currentPos = (0,0)
-        self.targetPos = (0,0)
+        self.currentPos = (0,0) # this should always be in degrees
+        self.targetPos = (0,0) # likewise
 
         self.radioSources = []
 
@@ -36,14 +36,14 @@ class Skymap(QtGui.QWidget):
     def paintEvent(self, event):
         qp = QtGui.QPainter()
         qp.begin(self)
-        #self.drawPoints(qp,50)
-        #self.drawObject(qp,(100,50),"myObject")
         self.drawRadioSources(qp)
-        #self.drawSun(qp)
         self.drawLines(qp)
         self.drawCurrentPosCrosshair(qp)
         self.drawTargetPosCrosshair(qp)
         qp.end()
+
+    def update(self):
+        self.parent().updateStatusBar(self.srt.getStatus())
                             
     def setCurrentPos(self,pos):
         self.currentPos = pos
@@ -94,7 +94,7 @@ class Skymap(QtGui.QWidget):
             self.parent().formWidget.updateEphemLabel(clickedSource)
 
         # end temp
-        targetPos = (x,y)
+        targetPos = self.pixelToDegree((x,y))
         currentPos = self.currentPos
         state = self.srt.getStatus()
         if state != Status.SLEWING:
@@ -103,7 +103,7 @@ class Skymap(QtGui.QWidget):
                 print("Already at that position.")
                 self.targetPos = currentPos
             else:
-                print("Slewing to " + str(self.pixelToDegree(targetPos)))
+                print("Slewing to " + str(targetPos))
                 self.srt.slew(self,targetPos)
                 self.currentPos = targetPos
         else:
@@ -119,7 +119,7 @@ class Skymap(QtGui.QWidget):
         self.drawCrosshair(self.targetPos,color,qp)
 
     def drawCrosshair(self,pos,color,qp):
-        x,y = pos
+        x,y = self.degreeToPixel(pos)
         d = 5
         crosshairPen = QtGui.QPen(color,1,QtCore.Qt.SolidLine)
         qp.setPen(crosshairPen)
@@ -309,6 +309,7 @@ class Skymap(QtGui.QWidget):
             elif name.lower() == "moon":
                 src = RadioSource("Moon")
                 src.moon()
+                print("Moon coords " + str(src.getPos()))
                 self.radioSources.append(src)
                 print(line + " - OK.")
             else:
