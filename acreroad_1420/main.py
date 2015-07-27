@@ -3,7 +3,7 @@ from PyQt4 import QtGui, QtCore
 from skymap import Skymap
 from srt import SRT, Mode
 
-class SLEW_TOGGLE:
+class SlewToggle:
     ON = 0
     OFF = 1
 
@@ -34,34 +34,48 @@ class mainWindow(QtGui.QMainWindow):
     def getMode(self):
         return self.mode
 
+class buttonLayout(QtGui.QWidget):
+    def __init__(self,parent):
+        super(buttonWidget,self).__init__(parent)
+        self.setGeometry(300,0,300,300)
+        gb = QtGui.QGroupBox()
+
 class formWidget(QtGui.QWidget):
     def __init__(self,parent):
         super(formWidget,self).__init__(parent)
-        self.setGeometry(0,0,300,150)
-        self.layout = QtGui.QVBoxLayout(self)
-        buttonWidth = 85
-        
+        self.setGeometry(0,0,300,300)
+        #self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtGui.QGridLayout(self)
+        self.layout.setHorizontalSpacing(200)
+        buttonWidth = 90
+    
         self.stowButton = QtGui.QPushButton("Stow")
         #self.stowButton.setMinimumSize(20,50)
         self.stowButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.stowButton)
+        self.layout.addWidget(self.stowButton,1,1)
         self.stowButton.clicked.connect(self.handleStowButton)
 
-        self.slewToggle = SLEW_TOGGLE.ON
+        self.slewToggle = SlewToggle.OFF
         self.slewButton = QtGui.QPushButton("Slew Toggle")
         self.slewButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.slewButton)
+        self.slewButton.setCheckable(True)
+        self.layout.addWidget(self.slewButton,2,1)
         self.slewButton.clicked.connect(self.handleSlewButton)
 
         self.trackButton = QtGui.QPushButton("Track")
         self.trackButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.trackButton)
+        self.layout.addWidget(self.trackButton,3,1)
         self.trackButton.clicked.connect(self.handleTrackButton)
 
-        #parent.skymap.radioSources # the list of displayed radio sources
-        
         self.label = QtGui.QLabel("azel: " + str(parent.srt.getCurrentPos()))
-        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.label,2,2)
+
+        self.antennaCoordsLabel = QtGui.QLabel("ant coords")
+        #self.antennaCoordsLabel.setFrameRect(QtCore.QRect(100,0,100,50))
+        #self.antennaCoordsLabel.move(100,0)
+        self.layout.addWidget(self.antennaCoordsLabel,1,2)
+
+        #self.antennaCoordsLabel.show()
         
         self.setLayout(self.layout)
 
@@ -69,11 +83,11 @@ class formWidget(QtGui.QWidget):
         pass
 
     def handleSlewButton(self):
-        if self.slewToggle == SLEW_TOGGLE.ON:
-            self.slewToggle = SLEW_TOGGLE.OFF
+        if self.slewToggle == SlewToggle.ON:
+            self.slewToggle = SlewToggle.OFF
             print("Slew toggle OFF")
-        elif self.slewToggle == SLEW_TOGGLE.OFF:
-            self.slewToggle = SLEW_TOGGLE.ON
+        elif self.slewToggle == SlewToggle.OFF:
+            self.slewToggle = SlewToggle.ON
             print("Slew toggle ON")
 
     def handleTrackButton(self):
@@ -83,6 +97,13 @@ class formWidget(QtGui.QWidget):
         name = src.getName()
         pos = src.getPos()
         self.label.setText(name + " " + "%.2f %.2f" % pos)
+
+    def getSlewToggle(self):
+        return self.slewToggle
+
+    def setSlewToggle(self,st):
+        self.slewToggle = st
+
         
 
 def run():

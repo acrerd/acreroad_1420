@@ -8,6 +8,10 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy.coordinates import get_sun
 
+class SlewToggle:
+    ON = 0
+    OFF = 1
+
 class Skymap(QtGui.QWidget):
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent=parent)
@@ -42,8 +46,19 @@ class Skymap(QtGui.QWidget):
         self.drawTargetPosCrosshair(qp)
         qp.end()
 
-    def update(self):
-        self.parent().updateStatusBar(self.srt.getStatus())
+
+    def updateStatusBar(self):
+        status = self.srt.getStatus()
+        if status == Status.INIT:
+            self.parent().updateStatusBar("Status: Initialising")
+        elif status == Status.SLEWING:
+            self.parent().updateStatusBar("Status: Slewing")
+        elif status == Status.PARKED:
+            self.parent().updateStatusBar("Status: Parked")
+        elif status == Status.CALIBRATING:
+            self.parent().updateStatusBar("Status: Calibrating")
+        elif status == Status.READY:
+            self.parent().updateStatusBar("Status: Ready")
                             
     def setCurrentPos(self,pos):
         self.currentPos = pos
@@ -58,6 +73,9 @@ class Skymap(QtGui.QWidget):
         self.coordinateSystem = coordsys
 
     def checkClickedSource(self,clickedPos,r):
+        """
+        Tests whether a drawn source has been clicked on.
+        """
         (x,y) = clickedPos
         for src in self.radioSources:
             (sx,sy) = src.getPos()
@@ -71,43 +89,39 @@ class Skymap(QtGui.QWidget):
                 
 
     def mousePressEvent(self, QMouseEvent):
+        """
+        Event handler for when the cursor is clicked on the skymap area.
+        """
         cursor = QtGui.QCursor()
         x = self.mapFromGlobal(cursor.pos()).x()
         y = self.mapFromGlobal(cursor.pos()).y()
                 
-        # temp - testing clicking sources
-        acre_road = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
-        now = Time(time.time(),format='unix')
-        altazframe = AltAz(obstime=now, location=acre_road)
-        sunaltaz = get_sun(now).transform_to(altazframe)
-        alt = float(sunaltaz.alt.degree)
-        az = float(sunaltaz.az.degree)
-        
-        r = 4
-
-        if (abs(self.pixelToDegreeX(x) - az)) < r and (abs(self.pixelToDegreeY(y) - alt)) < r:
-            print("You clicked the Sun!")
-
         clickedSource = self.checkClickedSource((x,y),4)
-        #print(type(clickedSource))
         if clickedSource != 0:
             self.parent().formWidget.updateEphemLabel(clickedSource)
 
-        # end temp
         targetPos = self.pixelToDegree((x,y))
         currentPos = self.currentPos
         state = self.srt.getStatus()
-        if state != Status.SLEWING:
-            self.targetPos = targetPos
-            if targetPos == currentPos:
-                print("Already at that position.")
-                self.targetPos = currentPos
+        slewToggle = self.parent().formWidget.getSlewToggle()
+        if slewToggle == SlewToggle.ON:
+            if state != Status.SLEWING:
+                self.targetPos = targetPos
+                if targetPos == currentPos:
+                    print("Already at that position.")
+                    self.targetPos = currentPos
+                    self.srt.setStatus(Status.READY)
+                else:
+                    print("Slewing to " + str(targetPos))
+                    self.srt.setStatus(Status.SLEWING)
+                    self.updateStatusBar()
+                    self.srt.slew(self,targetPos)
+                    self.currentPos = targetPos
+                    self.updateStatusBar()
             else:
-                print("Slewing to " + str(targetPos))
-                self.srt.slew(self,targetPos)
-                self.currentPos = targetPos
+                print("Already Slewing.  Please wait until finished.")
         else:
-            print("Already Slewing.  Please wait until finished.")
+            pass
         self.update()
     
     def drawCurrentPosCrosshair(self,qp):
@@ -309,7 +323,6 @@ class Skymap(QtGui.QWidget):
             elif name.lower() == "moon":
                 src = RadioSource("Moon")
                 src.moon()
-                print("Moon coords " + str(src.getPos()))
                 self.radioSources.append(src)
                 print(line + " - OK.")
             else:
