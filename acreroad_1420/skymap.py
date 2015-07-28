@@ -36,6 +36,9 @@ class Skymap(QtGui.QWidget):
     def init(self):
         self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue()
+        timer = QtCore.QTimer(self)
+        timer.timeout.connect(self.updateBackEnd)
+        timer.start(10000)
 
     def paintEvent(self, event):
         qp = QtGui.QPainter()
@@ -46,7 +49,13 @@ class Skymap(QtGui.QWidget):
         self.drawTargetPosCrosshair(qp)
         qp.end()
 
-
+    def updateBackEnd(self):
+        for src in self.radioSources:
+            src.update()
+        self.update()
+        #self.parent().sourceInfo.update()
+        QtGui.QApplication.processEvents()
+        
     def updateStatusBar(self):
         status = self.srt.getStatus()
         if status == Status.INIT:
@@ -125,14 +134,23 @@ class Skymap(QtGui.QWidget):
         self.update()
     
     def drawCurrentPosCrosshair(self,qp):
+        """
+        Wrapper function for drawing the current aimed direction crosshair.
+        """
         color = QtGui.QColor('black')
         self.drawCrosshair(self.currentPos,color,qp)
 
     def drawTargetPosCrosshair(self,qp):
+        """
+        Wrapper function for drawing the chosen target direction crosshair.
+        """
         color = QtGui.QColor('green')
         self.drawCrosshair(self.targetPos,color,qp)
 
     def drawCrosshair(self,pos,color,qp):
+        """
+        Draws a crosshair (a vertial and horizontal line) at a position pos in degrees.
+        """
         x,y = self.degreeToPixel(pos)
         d = 5
         crosshairPen = QtGui.QPen(color,1,QtCore.Qt.SolidLine)
@@ -156,8 +174,6 @@ class Skymap(QtGui.QWidget):
         sunaltaz = get_sun(now).transform_to(altazframe)
         alt = float(sunaltaz.alt.degree)
         az = float(sunaltaz.az.degree)
-
-
 
         #obs = ephem.Observer()
         #obs.lon, obs.lat = '-4.3', '55.9'   #glasgow                           
@@ -211,6 +227,9 @@ class Skymap(QtGui.QWidget):
             qp.drawEllipse(x,y,d,d)
 
     def drawRadioSources(self,qp):
+        """
+        Loops through the list of previously constructed radio sources and calls drawObject() to draw them on the skymap.
+        """
         for src in self.radioSources:
             name = src.getName()
             pos = src.getPos()
@@ -221,8 +240,10 @@ class Skymap(QtGui.QWidget):
                 #print(name + " is not visible currently.")
                 pass
         
-
     def drawPoints(self,qp,n):
+        """
+        A function for drawing n points randomly distributed on the skymap.
+        """
         x,y,w,h = self.sceneSize
         d = 3
         pointsPen = QtGui.QPen(QtCore.Qt.red,6,QtCore.Qt.DashLine)
@@ -234,6 +255,9 @@ class Skymap(QtGui.QWidget):
             qp.drawEllipse(x,y,d,d)
         
     def drawLines(self,qp):
+        """
+        Draw the axes lines.
+        """
         x,y,w,h = self.sceneSize
         
         linesPen = QtGui.QPen(QtCore.Qt.blue,1,QtCore.Qt.DashLine)
@@ -308,11 +332,6 @@ class Skymap(QtGui.QWidget):
         print("Using catalogue file: %s" % f.name)
         print("Loading source information.")
 
-        # sun and moon from pyephem - handle separetly
-        #src = RadioSource("Sun")
-        #src.sun()
-        #self.radioSources.append(src)
-        #print(src.getName() + "\n" + " - OK.")
         for line in f:
             name = line.rstrip()
             if name.lower() == "sun":
