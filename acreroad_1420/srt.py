@@ -18,8 +18,7 @@ class Mode:
     LIVE = 0
     SIM = 1
 
-class SRT():
-   
+class SRT():   
     def __init__(self,mode):
         device = ""
         baud = 9600
@@ -86,6 +85,7 @@ class SRT():
                     self.setCurrentPos((i,cy))
                     skymap.setCurrentPos((i,cy))
                     skymap.update()
+                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif x > cx:
@@ -93,6 +93,7 @@ class SRT():
                     self.setCurrentPos((i,cy))
                     skymap.setCurrentPos((i,cy))
                     skymap.update()
+                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
             if y < cy:
@@ -100,6 +101,7 @@ class SRT():
                     self.setCurrentPos((x,i))
                     skymap.setCurrentPos((x,i))
                     skymap.update()
+                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif y > cy:
@@ -107,13 +109,14 @@ class SRT():
                     self.setCurrentPos((x,i))
                     skymap.setCurrentPos((x,i))
                     skymap.update()
+                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
         else:
             # This is where live code goes
             # remember self.getCurrentPos() is now in degrees in azalt or radec - NOT pixel coordinates.
             print("Slewing in live mode.")
-            (x,y) = pos # target - mouse click position in pixels
+            (x,y) = pos # target - mouse click position in pixels   # been changed NOW!!!
             (cx,cy) = self.pos # current position in degrees.
             print("Target Pos: (" + str(skymap.pixelToDegreeX(x)) + "," + str(skymap.pixelToDegreeY(y)) + ")")
             print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
@@ -121,6 +124,7 @@ class SRT():
             self.drive.goto(skycoord)
             skymap.setCurrentPos() # for updating onscreen position
             skymap.update()
+            skymap.parent().antennaCoordsInfo.update()
             QtGui.QApplication.processEvents()
             #test again
         print("Finished slewing to " + str(self.getCurrentPos()))

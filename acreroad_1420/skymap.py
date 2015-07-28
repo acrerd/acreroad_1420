@@ -98,12 +98,12 @@ class Skymap(QtGui.QWidget):
                 
         clickedSource = self.checkClickedSource((x,y),4)
         if clickedSource != 0:
-            self.parent().formWidget.updateEphemLabel(clickedSource)
+            self.parent().sourceInfo.updateEphemLabel(clickedSource)
 
         targetPos = self.pixelToDegree((x,y))
         currentPos = self.currentPos
         state = self.srt.getStatus()
-        slewToggle = self.parent().formWidget.getSlewToggle()
+        slewToggle = self.parent().commandButtons.getSlewToggle()
         if slewToggle == SlewToggle.ON:
             if state != Status.SLEWING:
                 self.targetPos = targetPos

@@ -18,7 +18,10 @@ class mainWindow(QtGui.QMainWindow):
         #self.skymap.setCurrentPos(self.srt.getCurrentPos())
         self.skymap.init()
         self.updateStatusBar("This is the status bar.")
-        self.formWidget = formWidget(self)
+        self.commandButtons = commandButtons(self)
+        self.antennaCoordsInfo = antennaCoordsInfo(self)
+        self.sourceInfo = sourceInfo(self)
+        #self.buttonLayout = buttonLayout(self)
         #self.setCentralWidget(self.formWidget)
         #self.mode = Mode.SIM # default
         
@@ -34,50 +37,108 @@ class mainWindow(QtGui.QMainWindow):
     def getMode(self):
         return self.mode
 
-class buttonLayout(QtGui.QWidget):
+class antennaCoordsInfo(QtGui.QWidget):
     def __init__(self,parent):
-        super(buttonWidget,self).__init__(parent)
-        self.setGeometry(300,0,300,300)
-        gb = QtGui.QGroupBox()
+        super(antennaCoordsInfo,self).__init__(parent)
+        self.setGeometry(250,0,200,250)
+        gb = QtGui.QGroupBox(self)
+        gb.setTitle("Antenna Coordinates")
+        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")        
+        gb.setFixedSize(200,250)
+        layout = QtGui.QVBoxLayout(self)
 
-class formWidget(QtGui.QWidget):
+        self.posLabel = QtGui.QLabel("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
+        layout.addWidget(self.posLabel)
+
+        self.radecLabel = QtGui.QLabel("Ra Dec: ")
+        layout.addWidget(self.radecLabel)
+        
+        self.galLabel = QtGui.QLabel("Gal: ")
+        layout.addWidget(self.galLabel)        
+
+        gb.setLayout(layout)
+
+    def update(self):
+        self.posLabel.setText("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
+        #self.radecLabel.setText()
+        #self.galLabel.setText()
+
+class sourceInfo(QtGui.QWidget):
     def __init__(self,parent):
-        super(formWidget,self).__init__(parent)
-        self.setGeometry(0,0,300,300)
-        #self.layout = QtGui.QVBoxLayout(self)
-        self.layout = QtGui.QGridLayout(self)
-        self.layout.setHorizontalSpacing(200)
+        super(sourceInfo,self).__init__(parent)
+        self.setGeometry(0,275,600,100)
+        gb = QtGui.QGroupBox(self)
+        gb.setTitle("Source Information")
+        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
+        gb.setFixedSize(600,100)
+        layout = QtGui.QVBoxLayout(self)
+
+        self.nameLabel = QtGui.QLabel("Name: ")
+        layout.addWidget(self.nameLabel)
+
+        self.posLabel = QtGui.QLabel("AzEl: ")
+        layout.addWidget(self.posLabel)
+
+        self.radecLabel = QtGui.QLabel("Ra Dec: ")
+        layout.addWidget(self.radecLabel)
+        
+        self.galLabel = QtGui.QLabel("Gal: ")
+        layout.addWidget(self.galLabel)        
+
+        gb.setLayout(layout)
+
+    def updateEphemLabel(self,src):
+        name = src.getName()
+        pos = src.getPos()
+        #radec = src.getRADEC()
+        #gal = src.getGal()
+        self.nameLabel.setText("Name: " + name)
+        self.posLabel.setText("AzEl: " + "%.2f %.2f" % pos)
+        #self.radecLabel.setText()
+        #self.galLabel.setText()
+
+class commandButtons(QtGui.QWidget):
+    def __init__(self,parent):
+        super(commandButtons,self).__init__(parent)
+        self.setGeometry(0,0,150,200)
+        gb = QtGui.QGroupBox(self)
+        gb.setTitle("Control")
+        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
+        gb.setFixedSize(150,200)
+        layout = QtGui.QVBoxLayout(self)
         buttonWidth = 90
     
-        self.stowButton = QtGui.QPushButton("Stow")
-        #self.stowButton.setMinimumSize(20,50)
-        self.stowButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.stowButton,1,1)
-        self.stowButton.clicked.connect(self.handleStowButton)
+        stowButton = QtGui.QPushButton("Stow")
+        #stowButton.setMinimumSize(20,50)
+        stowButton.setFixedWidth(buttonWidth)
+        layout.addWidget(stowButton)
+        stowButton.clicked.connect(self.handleStowButton)
 
         self.slewToggle = SlewToggle.OFF
-        self.slewButton = QtGui.QPushButton("Slew Toggle")
-        self.slewButton.setFixedWidth(buttonWidth)
-        self.slewButton.setCheckable(True)
-        self.layout.addWidget(self.slewButton,2,1)
-        self.slewButton.clicked.connect(self.handleSlewButton)
+        slewButton = QtGui.QPushButton("Slew Toggle")
+        slewButton.setFixedWidth(buttonWidth)
+        slewButton.setCheckable(True)
+        layout.addWidget(slewButton)
+        slewButton.clicked.connect(self.handleSlewButton)
 
-        self.trackButton = QtGui.QPushButton("Track")
-        self.trackButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.trackButton,3,1)
-        self.trackButton.clicked.connect(self.handleTrackButton)
+        trackButton = QtGui.QPushButton("Track")
+        trackButton.setFixedWidth(buttonWidth)
+        layout.addWidget(trackButton)
+        trackButton.clicked.connect(self.handleTrackButton)
 
-        self.label = QtGui.QLabel("azel: " + str(parent.srt.getCurrentPos()))
-        self.layout.addWidget(self.label,2,2)
+        #self.label = QtGui.QLabel("azel: " + str(parent.srt.getCurrentPos()))
+        #self.layout.addWidget(self.label,2,2)
 
-        self.antennaCoordsLabel = QtGui.QLabel("ant coords")
+        #self.antennaCoordsLabel = QtGui.QLabel("ant coords")
         #self.antennaCoordsLabel.setFrameRect(QtCore.QRect(100,0,100,50))
         #self.antennaCoordsLabel.move(100,0)
-        self.layout.addWidget(self.antennaCoordsLabel,1,2)
+        #self.layout.addWidget(self.antennaCoordsLabel,1,2)
 
         #self.antennaCoordsLabel.show()
         
-        self.setLayout(self.layout)
+        #self.setLayout(self.layout)
+
+        gb.setLayout(layout)
 
     def handleStowButton(self):
         pass
@@ -93,11 +154,6 @@ class formWidget(QtGui.QWidget):
     def handleTrackButton(self):
         pass
         
-    def updateEphemLabel(self,src):
-        name = src.getName()
-        pos = src.getPos()
-        self.label.setText(name + " " + "%.2f %.2f" % pos)
-
     def getSlewToggle(self):
         return self.slewToggle
 
