@@ -1,5 +1,5 @@
 import time, astropy
-from PyQt4 import QtGui
+from PyQt4 import QtGui,QtCore
 from drive import Drive
 
 class Status:
@@ -8,6 +8,7 @@ class Status:
     PARKED = 2
     CALIBRATING = 3
     READY = 4
+    TRACKING = 5
 
 class CoordinateSystem:
     RADEC = 0
@@ -139,5 +140,14 @@ class SRT():
     def setStatus(self,status):
         self.status = status
 
-    def track():
-        pass
+    def track(self,skymap,src):
+        """
+        The SRT will follow the source as it move across the sky.
+        """
+        print("Tracking " + src.getName())
+        pos = src.getPos()
+        self.slew(skymap,pos)
+        self.status = Status.TRACKING
+        
+        
+       

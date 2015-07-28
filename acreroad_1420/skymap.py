@@ -38,7 +38,7 @@ class Skymap(QtGui.QWidget):
         self.readCatalogue()
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.updateBackEnd)
-        timer.start(10000)
+        timer.start(20000) # every 20 secs, get updated position information of all radio sources and re-draw them.
 
     def paintEvent(self, event):
         qp = QtGui.QPainter()
@@ -50,9 +50,16 @@ class Skymap(QtGui.QWidget):
         qp.end()
 
     def updateBackEnd(self):
+        """
+        For each loaded radio source, call its update method to calculate its most current coordinates.
+        """
         for src in self.radioSources:
             src.update()
         self.update()
+        if self.srt.getStatus() == Status.TRACKING:
+            source = self.getClickedSource() 
+            self.srt.track(self,source)
+        self.updateStatusBar()
         #self.parent().sourceInfo.update()
         QtGui.QApplication.processEvents()
         
@@ -68,6 +75,9 @@ class Skymap(QtGui.QWidget):
             self.parent().updateStatusBar("Status: Calibrating")
         elif status == Status.READY:
             self.parent().updateStatusBar("Status: Ready")
+        elif status == Status.TRACKING:
+            sourceName = self.getClickedSource().getName()
+            self.parent().updateStatusBar("Status: Tracking " + sourceName)
                             
     def setCurrentPos(self,pos):
         self.currentPos = pos
@@ -80,6 +90,12 @@ class Skymap(QtGui.QWidget):
 
     def setCoordinateSystem(self, coordsys):
         self.coordinateSystem = coordsys
+
+    def getClickedSource(self):
+        return self.clickedSource
+
+    def setClickedSource(self,src):
+        self.clickedSource = src
 
     def checkClickedSource(self,clickedPos,r):
         """
@@ -105,9 +121,9 @@ class Skymap(QtGui.QWidget):
         x = self.mapFromGlobal(cursor.pos()).x()
         y = self.mapFromGlobal(cursor.pos()).y()
                 
-        clickedSource = self.checkClickedSource((x,y),4)
-        if clickedSource != 0:
-            self.parent().sourceInfo.updateEphemLabel(clickedSource)
+        self.clickedSource = self.checkClickedSource((x,y),4)
+        if self.clickedSource != 0:
+            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
 
         targetPos = self.pixelToDegree((x,y))
         currentPos = self.currentPos

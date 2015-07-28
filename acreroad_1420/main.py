@@ -1,9 +1,14 @@
 import sys, argparse
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
-from srt import SRT, Mode
+from srt import SRT, Status, Mode
+from radiosource import RadioSource
 
 class SlewToggle:
+    ON = 0
+    OFF = 1
+
+class TrackToggle:
     ON = 0
     OFF = 1
 
@@ -120,30 +125,32 @@ class commandButtons(QtGui.QWidget):
         slewButton.setCheckable(True)
         layout.addWidget(slewButton)
         slewButton.clicked.connect(self.handleSlewButton)
-
-        trackButton = QtGui.QPushButton("Track")
+        
+        self.trackToggle = TrackToggle.OFF
+        trackButton = QtGui.QPushButton("Track Toggle")
         trackButton.setFixedWidth(buttonWidth)
         layout.addWidget(trackButton)
         trackButton.clicked.connect(self.handleTrackButton)
 
-        #self.label = QtGui.QLabel("azel: " + str(parent.srt.getCurrentPos()))
-        #self.layout.addWidget(self.label,2,2)
-
-        #self.antennaCoordsLabel = QtGui.QLabel("ant coords")
-        #self.antennaCoordsLabel.setFrameRect(QtCore.QRect(100,0,100,50))
-        #self.antennaCoordsLabel.move(100,0)
-        #self.layout.addWidget(self.antennaCoordsLabel,1,2)
-
-        #self.antennaCoordsLabel.show()
-        
-        #self.setLayout(self.layout)
-
         gb.setLayout(layout)
 
+        self.trackSource = RadioSource("ts")
+        self.oldTrackSource = RadioSource("ots")
+        self.trackTimer = QtCore.QTimer()
+        self.trackTimer.timeout.connect(self.handleTrackButton)
+        self.trackTimer.setInterval(5000)
+
+
     def handleStowButton(self):
+        """
+        Returns the SRT to its stow position.
+        """
         pass
 
     def handleSlewButton(self):
+        """
+        Turns slew capability on/off for selecting/slewing to source on the skymap.
+        """
         if self.slewToggle == SlewToggle.ON:
             self.slewToggle = SlewToggle.OFF
             print("Slew toggle OFF")
@@ -152,8 +159,18 @@ class commandButtons(QtGui.QWidget):
             print("Slew toggle ON")
 
     def handleTrackButton(self):
-        pass
-        
+        """
+        Whenever the track button is pressed, the SRT will begin tracking whatever source is currently seclected.  If it is pressed again and the source hasn't changed, it'll stop tracking that source.
+        """
+        if self.trackToggle == TrackToggle.OFF:
+            self.trackToggle = TrackToggle.ON
+            print("Track Toggle ON")
+            self.parent().srt.setStatus(Status.TRACKING)
+        elif self.trackToggle == TrackToggle.ON:
+            self.trackToggle = TrackToggle.OFF
+            print("Track Toggle OFF")
+            self.parent().srt.setStatus(Status.READY)
+
     def getSlewToggle(self):
         return self.slewToggle
 
