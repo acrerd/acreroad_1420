@@ -8,6 +8,10 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy.coordinates import get_sun
 
+class SlewToggle:
+    ON = 0
+    OFF = 1
+
 class Skymap(QtGui.QWidget):
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent=parent)
@@ -24,26 +28,56 @@ class Skymap(QtGui.QWidget):
         self.coordinateSystem = CoordinateSystem.AZEL
         self.srt = self.parent().getSRT()
 
-        self.currentPos = (0,0)
-        self.targetPos = (0,0)
+        self.currentPos = (0,0) # this should always be in degrees
+        self.targetPos = (0,0) # likewise
 
         self.radioSources = []
 
     def init(self):
         self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue()
+        timer = QtCore.QTimer(self)
+        timer.timeout.connect(self.updateBackEnd)
+        timer.start(20000) # every 20 secs, get updated position information of all radio sources and re-draw them.
 
     def paintEvent(self, event):
         qp = QtGui.QPainter()
         qp.begin(self)
-        #self.drawPoints(qp,50)
-        #self.drawObject(qp,(100,50),"myObject")
         self.drawRadioSources(qp)
-        #self.drawSun(qp)
         self.drawLines(qp)
         self.drawCurrentPosCrosshair(qp)
         self.drawTargetPosCrosshair(qp)
         qp.end()
+
+    def updateBackEnd(self):
+        """
+        For each loaded radio source, call its update method to calculate its most current coordinates.
+        """
+        for src in self.radioSources:
+            src.update()
+        self.update()
+        if self.srt.getStatus() == Status.TRACKING:
+            source = self.getClickedSource() 
+            self.srt.track(self,source)
+        self.updateStatusBar()
+        #self.parent().sourceInfo.update()
+        QtGui.QApplication.processEvents()
+        
+    def updateStatusBar(self):
+        status = self.srt.getStatus()
+        if status == Status.INIT:
+            self.parent().updateStatusBar("Status: Initialising")
+        elif status == Status.SLEWING:
+            self.parent().updateStatusBar("Status: Slewing")
+        elif status == Status.PARKED:
+            self.parent().updateStatusBar("Status: Parked")
+        elif status == Status.CALIBRATING:
+            self.parent().updateStatusBar("Status: Calibrating")
+        elif status == Status.READY:
+            self.parent().updateStatusBar("Status: Ready")
+        elif status == Status.TRACKING:
+            sourceName = self.getClickedSource().getName()
+            self.parent().updateStatusBar("Status: Tracking " + sourceName)
                             
     def setCurrentPos(self,pos):
         self.currentPos = pos
@@ -57,7 +91,16 @@ class Skymap(QtGui.QWidget):
     def setCoordinateSystem(self, coordsys):
         self.coordinateSystem = coordsys
 
+    def getClickedSource(self):
+        return self.clickedSource
+
+    def setClickedSource(self,src):
+        self.clickedSource = src
+
     def checkClickedSource(self,clickedPos,r):
+        """
+        Tests whether a drawn source has been clicked on.
+        """
         (x,y) = clickedPos
         for src in self.radioSources:
             (sx,sy) = src.getPos()
@@ -71,55 +114,60 @@ class Skymap(QtGui.QWidget):
                 
 
     def mousePressEvent(self, QMouseEvent):
+        """
+        Event handler for when the cursor is clicked on the skymap area.
+        """
         cursor = QtGui.QCursor()
         x = self.mapFromGlobal(cursor.pos()).x()
         y = self.mapFromGlobal(cursor.pos()).y()
                 
-        # temp - testing clicking sources
-        acre_road = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
-        now = Time(time.time(),format='unix')
-        altazframe = AltAz(obstime=now, location=acre_road)
-        sunaltaz = get_sun(now).transform_to(altazframe)
-        alt = float(sunaltaz.alt.degree)
-        az = float(sunaltaz.az.degree)
-        
-        r = 4
+        self.clickedSource = self.checkClickedSource((x,y),4)
+        if self.clickedSource != 0:
+            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
 
-        if (abs(self.pixelToDegreeX(x) - az)) < r and (abs(self.pixelToDegreeY(y) - alt)) < r:
-            print("You clicked the Sun!")
-
-        clickedSource = self.checkClickedSource((x,y),4)
-        #print(type(clickedSource))
-        if clickedSource != 0:
-            self.parent().formWidget.updateEphemLabel(clickedSource)
-
-        # end temp
-        targetPos = (x,y)
+        targetPos = self.pixelToDegree((x,y))
         currentPos = self.currentPos
         state = self.srt.getStatus()
-        if state != Status.SLEWING:
-            self.targetPos = targetPos
-            if targetPos == currentPos:
-                print("Already at that position.")
-                self.targetPos = currentPos
+        slewToggle = self.parent().commandButtons.getSlewToggle()
+        if slewToggle == SlewToggle.ON:
+            if state != Status.SLEWING:
+                self.targetPos = targetPos
+                if targetPos == currentPos:
+                    print("Already at that position.")
+                    self.targetPos = currentPos
+                    self.srt.setStatus(Status.READY)
+                else:
+                    print("Slewing to " + str(targetPos))
+                    self.srt.setStatus(Status.SLEWING)
+                    self.updateStatusBar()
+                    self.srt.slew(self,targetPos)
+                    self.currentPos = targetPos
+                    self.updateStatusBar()
             else:
-                print("Slewing to " + str(self.pixelToDegree(targetPos)))
-                self.srt.slew(self,targetPos)
-                self.currentPos = targetPos
+                print("Already Slewing.  Please wait until finished.")
         else:
-            print("Already Slewing.  Please wait until finished.")
+            pass
         self.update()
     
     def drawCurrentPosCrosshair(self,qp):
+        """
+        Wrapper function for drawing the current aimed direction crosshair.
+        """
         color = QtGui.QColor('black')
         self.drawCrosshair(self.currentPos,color,qp)
 
     def drawTargetPosCrosshair(self,qp):
+        """
+        Wrapper function for drawing the chosen target direction crosshair.
+        """
         color = QtGui.QColor('green')
         self.drawCrosshair(self.targetPos,color,qp)
 
     def drawCrosshair(self,pos,color,qp):
-        x,y = pos
+        """
+        Draws a crosshair (a vertial and horizontal line) at a position pos in degrees.
+        """
+        x,y = self.degreeToPixel(pos)
         d = 5
         crosshairPen = QtGui.QPen(color,1,QtCore.Qt.SolidLine)
         qp.setPen(crosshairPen)
@@ -142,8 +190,6 @@ class Skymap(QtGui.QWidget):
         sunaltaz = get_sun(now).transform_to(altazframe)
         alt = float(sunaltaz.alt.degree)
         az = float(sunaltaz.az.degree)
-
-
 
         #obs = ephem.Observer()
         #obs.lon, obs.lat = '-4.3', '55.9'   #glasgow                           
@@ -197,6 +243,9 @@ class Skymap(QtGui.QWidget):
             qp.drawEllipse(x,y,d,d)
 
     def drawRadioSources(self,qp):
+        """
+        Loops through the list of previously constructed radio sources and calls drawObject() to draw them on the skymap.
+        """
         for src in self.radioSources:
             name = src.getName()
             pos = src.getPos()
@@ -207,8 +256,10 @@ class Skymap(QtGui.QWidget):
                 #print(name + " is not visible currently.")
                 pass
         
-
     def drawPoints(self,qp,n):
+        """
+        A function for drawing n points randomly distributed on the skymap.
+        """
         x,y,w,h = self.sceneSize
         d = 3
         pointsPen = QtGui.QPen(QtCore.Qt.red,6,QtCore.Qt.DashLine)
@@ -220,6 +271,9 @@ class Skymap(QtGui.QWidget):
             qp.drawEllipse(x,y,d,d)
         
     def drawLines(self,qp):
+        """
+        Draw the axes lines.
+        """
         x,y,w,h = self.sceneSize
         
         linesPen = QtGui.QPen(QtCore.Qt.blue,1,QtCore.Qt.DashLine)
@@ -294,11 +348,6 @@ class Skymap(QtGui.QWidget):
         print("Using catalogue file: %s" % f.name)
         print("Loading source information.")
 
-        # sun and moon from pyephem - handle separetly
-        #src = RadioSource("Sun")
-        #src.sun()
-        #self.radioSources.append(src)
-        #print(src.getName() + "\n" + " - OK.")
         for line in f:
             name = line.rstrip()
             if name.lower() == "sun":

@@ -1,9 +1,14 @@
 import sys, argparse
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
-from srt import SRT, Mode
+from srt import SRT, Status, Mode
+from radiosource import RadioSource
 
-class SLEW_TOGGLE:
+class SlewToggle:
+    ON = 0
+    OFF = 1
+
+class TrackToggle:
     ON = 0
     OFF = 1
 
@@ -18,7 +23,10 @@ class mainWindow(QtGui.QMainWindow):
         #self.skymap.setCurrentPos(self.srt.getCurrentPos())
         self.skymap.init()
         self.updateStatusBar("This is the status bar.")
-        self.formWidget = formWidget(self)
+        self.commandButtons = commandButtons(self)
+        self.antennaCoordsInfo = antennaCoordsInfo(self)
+        self.sourceInfo = sourceInfo(self)
+        #self.buttonLayout = buttonLayout(self)
         #self.setCentralWidget(self.formWidget)
         #self.mode = Mode.SIM # default
         
@@ -34,55 +42,141 @@ class mainWindow(QtGui.QMainWindow):
     def getMode(self):
         return self.mode
 
-class formWidget(QtGui.QWidget):
+class antennaCoordsInfo(QtGui.QWidget):
     def __init__(self,parent):
-        super(formWidget,self).__init__(parent)
-        self.setGeometry(0,0,300,150)
-        self.layout = QtGui.QVBoxLayout(self)
-        buttonWidth = 85
+        super(antennaCoordsInfo,self).__init__(parent)
+        self.setGeometry(250,0,200,250)
+        gb = QtGui.QGroupBox(self)
+        gb.setTitle("Antenna Coordinates")
+        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")        
+        gb.setFixedSize(200,250)
+        layout = QtGui.QVBoxLayout(self)
+
+        self.posLabel = QtGui.QLabel("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
+        layout.addWidget(self.posLabel)
+
+        self.radecLabel = QtGui.QLabel("Ra Dec: ")
+        layout.addWidget(self.radecLabel)
         
-        self.stowButton = QtGui.QPushButton("Stow")
-        #self.stowButton.setMinimumSize(20,50)
-        self.stowButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.stowButton)
-        self.stowButton.clicked.connect(self.handleStowButton)
+        self.galLabel = QtGui.QLabel("Gal: ")
+        layout.addWidget(self.galLabel)        
 
-        self.slewToggle = SLEW_TOGGLE.ON
-        self.slewButton = QtGui.QPushButton("Slew Toggle")
-        self.slewButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.slewButton)
-        self.slewButton.clicked.connect(self.handleSlewButton)
+        gb.setLayout(layout)
 
-        self.trackButton = QtGui.QPushButton("Track")
-        self.trackButton.setFixedWidth(buttonWidth)
-        self.layout.addWidget(self.trackButton)
-        self.trackButton.clicked.connect(self.handleTrackButton)
+    def update(self):
+        self.posLabel.setText("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
+        #self.radecLabel.setText()
+        #self.galLabel.setText()
 
-        #parent.skymap.radioSources # the list of displayed radio sources
+class sourceInfo(QtGui.QWidget):
+    def __init__(self,parent):
+        super(sourceInfo,self).__init__(parent)
+        self.setGeometry(0,275,600,100)
+        gb = QtGui.QGroupBox(self)
+        gb.setTitle("Source Information")
+        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
+        gb.setFixedSize(600,100)
+        layout = QtGui.QVBoxLayout(self)
+
+        self.nameLabel = QtGui.QLabel("Name: ")
+        layout.addWidget(self.nameLabel)
+
+        self.posLabel = QtGui.QLabel("AzEl: ")
+        layout.addWidget(self.posLabel)
+
+        self.radecLabel = QtGui.QLabel("Ra Dec: ")
+        layout.addWidget(self.radecLabel)
         
-        self.label = QtGui.QLabel("azel: " + str(parent.srt.getCurrentPos()))
-        self.layout.addWidget(self.label)
-        
-        self.setLayout(self.layout)
+        self.galLabel = QtGui.QLabel("Gal: ")
+        layout.addWidget(self.galLabel)        
 
-    def handleStowButton(self):
-        pass
+        gb.setLayout(layout)
 
-    def handleSlewButton(self):
-        if self.slewToggle == SLEW_TOGGLE.ON:
-            self.slewToggle = SLEW_TOGGLE.OFF
-            print("Slew toggle OFF")
-        elif self.slewToggle == SLEW_TOGGLE.OFF:
-            self.slewToggle = SLEW_TOGGLE.ON
-            print("Slew toggle ON")
-
-    def handleTrackButton(self):
-        pass
-        
     def updateEphemLabel(self,src):
         name = src.getName()
         pos = src.getPos()
-        self.label.setText(name + " " + "%.2f %.2f" % pos)
+        #radec = src.getRADEC()
+        #gal = src.getGal()
+        self.nameLabel.setText("Name: " + name)
+        self.posLabel.setText("AzEl: " + "%.2f %.2f" % pos)
+        #self.radecLabel.setText()
+        #self.galLabel.setText()
+
+class commandButtons(QtGui.QWidget):
+    def __init__(self,parent):
+        super(commandButtons,self).__init__(parent)
+        self.setGeometry(0,0,150,200)
+        gb = QtGui.QGroupBox(self)
+        gb.setTitle("Control")
+        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
+        gb.setFixedSize(150,200)
+        layout = QtGui.QVBoxLayout(self)
+        buttonWidth = 90
+    
+        stowButton = QtGui.QPushButton("Stow")
+        #stowButton.setMinimumSize(20,50)
+        stowButton.setFixedWidth(buttonWidth)
+        layout.addWidget(stowButton)
+        stowButton.clicked.connect(self.handleStowButton)
+
+        self.slewToggle = SlewToggle.OFF
+        slewButton = QtGui.QPushButton("Slew Toggle")
+        slewButton.setFixedWidth(buttonWidth)
+        slewButton.setCheckable(True)
+        layout.addWidget(slewButton)
+        slewButton.clicked.connect(self.handleSlewButton)
+        
+        self.trackToggle = TrackToggle.OFF
+        trackButton = QtGui.QPushButton("Track Toggle")
+        trackButton.setFixedWidth(buttonWidth)
+        layout.addWidget(trackButton)
+        trackButton.clicked.connect(self.handleTrackButton)
+
+        gb.setLayout(layout)
+
+        self.trackSource = RadioSource("ts")
+        self.oldTrackSource = RadioSource("ots")
+        self.trackTimer = QtCore.QTimer()
+        self.trackTimer.timeout.connect(self.handleTrackButton)
+        self.trackTimer.setInterval(5000)
+
+
+    def handleStowButton(self):
+        """
+        Returns the SRT to its stow position.
+        """
+        pass
+
+    def handleSlewButton(self):
+        """
+        Turns slew capability on/off for selecting/slewing to source on the skymap.
+        """
+        if self.slewToggle == SlewToggle.ON:
+            self.slewToggle = SlewToggle.OFF
+            print("Slew toggle OFF")
+        elif self.slewToggle == SlewToggle.OFF:
+            self.slewToggle = SlewToggle.ON
+            print("Slew toggle ON")
+
+    def handleTrackButton(self):
+        """
+        Whenever the track button is pressed, the SRT will begin tracking whatever source is currently seclected.  If it is pressed again and the source hasn't changed, it'll stop tracking that source.
+        """
+        if self.trackToggle == TrackToggle.OFF:
+            self.trackToggle = TrackToggle.ON
+            print("Track Toggle ON")
+            self.parent().srt.setStatus(Status.TRACKING)
+        elif self.trackToggle == TrackToggle.ON:
+            self.trackToggle = TrackToggle.OFF
+            print("Track Toggle OFF")
+            self.parent().srt.setStatus(Status.READY)
+
+    def getSlewToggle(self):
+        return self.slewToggle
+
+    def setSlewToggle(self,st):
+        self.slewToggle = st
+
         
 
 def run():

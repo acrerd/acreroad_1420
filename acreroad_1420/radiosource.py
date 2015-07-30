@@ -17,19 +17,6 @@ class RadioSource():
         
         self.acreRoadPyEphem = ephem.Observer()
         self.acreRoadPyEphem.lon, self.acreRoadPyEphem.lat = '-4.3', '55.9'   #glasgow
-        #obs.date = ephem.now()
-        #print("UT: %s" % obs.date)
-        #sun = ephem.Sun()
-        #sun.compute(obs)
-
-
-        #acre_road = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
-        #now = Time(time.time(),format='unix')
-        #altazframe = AltAz(obstime=now, location=acre_road)
-        #sunaltaz = get_sun(now).transform_to(altazframe)
-        #alt = float(sunaltaz.alt.degree)
-        #az = float(sunaltaz.az.degree)
-
 
     def sun(self):
         self.acreRoadPyEphem.date = ephem.now()
@@ -69,8 +56,17 @@ class RadioSource():
         """
         Update current position of the source.
         """
-        now = Time(time.time(),format='unix')
-        altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
+        if self.name.lower() == "sun":
+            self.sun()
+        elif self.name.lower() == "moon":
+            self.moon()
+        else:
+            source = SkyCoord.from_name(self.name)
+            now = Time(time.time(),format='unix')
+            altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
+            sourcealtaz = source.transform_to(altazframe)
+            self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
+
 
     def isVisible(self):
         """
