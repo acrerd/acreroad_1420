@@ -167,7 +167,7 @@ class Drive():
         longitude = location.longitude    
 
         # Construct the command
-        command_str = "O {} {} {} {} {} {}".format(latitude, longitude, dlat, dlon)
+        command_str = "O {} {} {} {} {} {}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
         return self._command(command_str)
 
     def goto(self, skycoord, track=True):
