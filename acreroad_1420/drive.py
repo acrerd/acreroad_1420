@@ -115,7 +115,7 @@ class Drive():
             self.ser.write(string.encode('ascii'))
 
             # Retrieve the return message from the controller
-            ret_line =  ser.readline()
+            ret_line =  self.ser.readline()
             if ret_line: return ret_line
             else : return 1
         
