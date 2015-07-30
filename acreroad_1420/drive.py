@@ -209,7 +209,7 @@ class Drive():
             if track:    
                 command_str = "ts"
                 return self._command(command_str)
-            else return 1
+            else: return 1
         else:
             raise ControllerException("The telescope has failed to slew to the requested location")
 
