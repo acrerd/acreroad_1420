@@ -145,7 +145,7 @@ class Drive():
         """
         time = datetime.datetime.utcnow()
 
-        command_str = "t {} {} {} {} {} {}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
+        command_str = "T {} {} {} {} {} {}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
 
         return self._command(command_str)
 
@@ -165,10 +165,10 @@ class Drive():
         longitude = location.longitude    
 
         # Construct the command
-        command_str = "T {} {} {} {}".format(latitude, longitude, dlat, dlon)
+        command_str = "O {} {} {} {}".format(latitude, longitude, dlat, dlon)
         return self._command(command_str)
 
-    def goto(self, skycoord):
+    def goto(self, skycoord, track=True):
         """
         Moves the telescope to point at a given sky location, and then commands the drive to track the point.
 
@@ -206,8 +206,10 @@ class Drive():
                 self.dec = dec
             
             # If the command completes then set the controller to track the object
-            command_str = "ts"
-            return self._command(command_str)
+            if track:    
+                command_str = "ts"
+                return self._command(command_str)
+            else return 1
         else:
             raise ControllerException("The telescope has failed to slew to the requested location")
 
