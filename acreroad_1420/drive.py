@@ -88,6 +88,7 @@ class Drive():
         
         self.calibrate(calibration)
         self.setTime()
+        
         self.setLocation(location)
         pass
 
@@ -150,7 +151,7 @@ class Drive():
 
         return self._command(command_str)
 
-    def setLocation(self, location=None, dlat=0, dlon=0):
+    def setLocation(self, location=None, dlat=0, dlon=0, azimuth=90, altitude=-6):
         """
         Sets the location of the telescope.
 
@@ -166,7 +167,7 @@ class Drive():
         longitude = location.longitude    
 
         # Construct the command
-        command_str = "O {} {} {} {}".format(latitude, longitude, dlat, dlon)
+        command_str = "O {} {} {} {} {} {}".format(latitude, longitude, dlat, dlon)
         return self._command(command_str)
 
     def goto(self, skycoord, track=True):
