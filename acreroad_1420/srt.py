@@ -1,4 +1,7 @@
 import time, astropy
+from astropy.time import Time
+from astropy import units as u
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from PyQt4 import QtGui,QtCore
 from drive import Drive
 
@@ -117,17 +120,20 @@ class SRT():
             # This is where live code goes
             # remember self.getCurrentPos() is now in degrees in azalt or radec - NOT pixel coordinates.
             print("Slewing in live mode.")
-            (x,y) = pos # target - mouse click position in pixels   # been changed NOW!!!
+            (x,y) = pos # target - mouse click position in degrees
             (cx,cy) = self.pos # current position in degrees.
-            print("Target Pos: (" + str(skymap.pixelToDegreeX(x)) + "," + str(skymap.pixelToDegreeY(y)) + ")")
+            print("Target Pos: (" + str(x) + "," + str(y) + ")")
             print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             # construct a SkyCoord in correct coordinate frame.
-            self.drive.goto(skycoord)
-            skymap.setCurrentPos() # for updating onscreen position
+            acreRoadAstropy = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+            now = Time(time.time(),format='unix')
+            altazframe = AltAz(x,y,obstime=now,location=acreRoadAstropy)
+            skycoord = SkyCoord(altazframe)        
+            self.drive.goto(skycoordazel)
+            skymap.setCurrentPos((az,el)) # for updating onscreen position -- maybe this should be done in paintevent() and called every few seconds?
             skymap.update()
             skymap.parent().antennaCoordsInfo.update()
             QtGui.QApplication.processEvents()
-            #test again
         print("Finished slewing to " + str(self.getCurrentPos()))
         self.status = Status.READY
         
@@ -144,10 +150,13 @@ class SRT():
         """
         The SRT will follow the source as it move across the sky.
         """
-        print("Tracking " + src.getName())
-        pos = src.getPos()
-        self.slew(skymap,pos)
-        self.status = Status.TRACKING
-        
+        if self.mode == Mode.SIM:
+            print("Tracking " + src.getName())
+            pos = src.getPos()
+            self.slew(skymap,pos)
+            self.status = Status.TRACKING
+        else:
+            # this is where the live code goes.
+            pass
         
        

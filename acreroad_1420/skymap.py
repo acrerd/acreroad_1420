@@ -60,7 +60,7 @@ class Skymap(QtGui.QWidget):
             source = self.getClickedSource() 
             self.srt.track(self,source)
         self.updateStatusBar()
-        #self.parent().sourceInfo.update()
+        self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
         QtGui.QApplication.processEvents()
         
     def updateStatusBar(self):
