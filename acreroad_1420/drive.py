@@ -102,6 +102,7 @@ class Drive():
         # Check that the command string is a string, and that it
         # matches the format required for a command string
         string = str(string)
+        string = string+"\n"
 
         if not self.com_format.match(string):
             raise ValueError(string+" : This string doesn't have the format of a valid controller command.'")
