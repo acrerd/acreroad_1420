@@ -221,7 +221,7 @@ class Drive():
 
         
         """
-        command_str = "gh"
+        command_str = "gH"
         return self._command(command_str)
 
     def status(self):
