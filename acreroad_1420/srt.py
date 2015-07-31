@@ -130,7 +130,7 @@ class SRT():
             altazframe = AltAz(x,y,obstime=now,location=acreRoadAstropy)
             skycoord = SkyCoord(altazframe)        
             self.drive.goto(skycoordazel)
-            skymap.setCurrentPos((az,el)) # for updating onscreen position -- maybe this should be done in paintevent() and called every few seconds?
+            skymap.setCurrentPos((az,el)) # for updating onscreen position as paintEvent() needs this value.
             skymap.update()
             skymap.parent().antennaCoordsInfo.update()
             QtGui.QApplication.processEvents()
