@@ -105,7 +105,7 @@ class Drive():
         # Check that the command string is a string, and that it
         # matches the format required for a command string
         string = str(string)
-        string = string+"\n"
+        string = string+"\n\r"
 
         if not self.com_format.match(string):
             raise ValueError(string+" : This string doesn't have the format of a valid controller command.'")
@@ -216,10 +216,10 @@ class Drive():
                 #self.dec = dec
             
             # If the command completes then set the controller to track the object
-            if track:    
-                command_str = "ts"
-                return self._command(command_str)
-            else: return 1
+            #if track:    
+            #    command_str = "ts"
+            #    return self._command(command_str)
+            #else: return 1
         else:
             raise ControllerException("The telescope has failed to slew to the requested location")
 
