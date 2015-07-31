@@ -92,8 +92,8 @@ class Drive():
         self.setLocation(location)
         pass
 
-    def _openconnection(self, device, baud, timeout=self.timeout):
-        self.ser = serial.Serial(device, baud, timeout=timeout)
+    def _openconnection(self, device, baud):
+        self.ser = serial.Serial(device, baud, timeout=self.timeout)
 
     def _command(self, string):
         """
