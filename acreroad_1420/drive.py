@@ -204,7 +204,7 @@ class Drive():
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
         
         # construct a command string
-        command_str = "gh {0.az.value:.2} {0.alt.value:.2}".format(skycoord)
+        command_str = "gh {0.az.value:.2f} {0.alt.value:.2f}".format(skycoord)
         print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
