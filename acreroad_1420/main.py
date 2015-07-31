@@ -111,7 +111,7 @@ class commandButtons(QtGui.QWidget):
         gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
         gb.setFixedSize(150,200)
         layout = QtGui.QVBoxLayout(self)
-        buttonWidth = 90
+        buttonWidth = 100
     
         stowButton = QtGui.QPushButton("Stow")
         #stowButton.setMinimumSize(20,50)
@@ -125,10 +125,16 @@ class commandButtons(QtGui.QWidget):
         slewButton.setCheckable(True)
         layout.addWidget(slewButton)
         slewButton.clicked.connect(self.handleSlewButton)
+
+        slewToCoordButton = QtGui.QPushButton("Slew to coord")
+        slewToCoordButton.setFixedWidth(buttonWidth)
+        layout.addWidget(slewToCoordButton)
+        slewToCoordButton.clicked.connect(self.handleSlewToCoordButton)
         
         self.trackToggle = TrackToggle.OFF
         trackButton = QtGui.QPushButton("Track Toggle")
         trackButton.setFixedWidth(buttonWidth)
+        trackButton.setCheckable(True)
         layout.addWidget(trackButton)
         trackButton.clicked.connect(self.handleTrackButton)
 
@@ -158,6 +164,29 @@ class commandButtons(QtGui.QWidget):
             self.slewToggle = SlewToggle.ON
             print("Slew toggle ON")
 
+    def handleSlewToCoordButton(self):
+        azel, ok = QtGui.QInputDialog.getText(self, 'Input', 
+            'Enter Az El:')
+        
+        if ok:
+            # check values
+            azs,els = azel.split(" ")
+            azf = float(azs)
+            elf = float(els)
+            valid = False
+            if azf < 0 or azf > 360:
+                valid = False
+            else:
+                valid = True
+
+            if elf < 0 or elf > 90:
+                valid = False
+            else:
+                valid = True
+            # slew to coords
+            if valid:
+                self.parent().srt.slew(self.parent().skymap,(azf,elf))
+                
     def handleTrackButton(self):
         """
         Whenever the track button is pressed, the SRT will begin tracking whatever source is currently seclected.  If it is pressed again and the source hasn't changed, it'll stop tracking that source.
@@ -181,35 +210,22 @@ class commandButtons(QtGui.QWidget):
 
 def run():
     app = QtGui.QApplication(sys.argv)
-    #srt = SRT()
-    #main = mainWindow(srt)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-live',dest='live',action='store_true',
                         help='Starts main in live mode.')
     parser.add_argument('-sim',dest='sim',action='store_true',
                         help='Starts main in simulation mode.')
     args = parser.parse_args()
-    #print(args.live,args.sim)
     if args.live == True and args.sim == False:
         print("Live mode enabled.")
-        #main.setMode(Mode.LIVE)
         mode = Mode.LIVE
     elif args.live == False and args.sim == True:
         print("Simulation mode enabled.")
-        #main.setMode(Mode.SIM)
         mode = Mode.SIM
 
     srt = SRT(mode)
     main = mainWindow(srt)
-    
-    
-    #skymap_size = (100,0,100,100)
-    #pos = (80,100)
-    #srt = SRT()
-    #skymap = Skymap(main)
-    #skymap.setCurrentPos(pos)
-    #skymap.init()
+
     main.show()
     sys.exit(app.exec_())
 
