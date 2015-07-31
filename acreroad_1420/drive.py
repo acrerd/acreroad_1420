@@ -208,6 +208,7 @@ class Drive():
         print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
+            pass
             # We need to do more here than just check the command has
             # passed successfully; we need to check the telescope is
             # (or thinks it is) pointing where we asked.
