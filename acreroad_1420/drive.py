@@ -27,7 +27,7 @@ simulate : bool
 import re, datetime
 
 import astropy
-from astropy.coordinates import SkyCoord, ICRS, EarthLocation
+from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
 import astropy.units as u
 import serial
 from astropy.time import Time
