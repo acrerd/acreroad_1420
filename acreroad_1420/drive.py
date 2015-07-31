@@ -30,6 +30,7 @@ import astropy
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation
 import astropy.units as u
 import serial
+from astropy.time import Time
 
 class Drive():
 
@@ -47,7 +48,7 @@ class Drive():
     
 
     
-    def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=None):
+    def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=acre_road):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -83,6 +84,7 @@ class Drive():
         """
         self.sim = simulate
         self.timeout = timeout
+        self.location = location
         # Initialise the connection
         if not self.sim: self._openconnection(device, baud)
         
@@ -193,11 +195,16 @@ class Drive():
         # but let's start simple, eh?')
 
         skycoord = skycoord.transform_to(frame=ICRS)
+
+        time = Time.now()
+        
         ra  = skycoord.ra
         dec = skycoord.dec
+
+        skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
         
         # construct a command string
-        command_str = "gE {} {}".format(ra, dec)
+        command_str = "gh {} {}".format(skycoord.az, skycoord.alt)
         # pass the slew-to command to the controller
         if self._command(command_str):
             # We need to do more here than just check the command has
