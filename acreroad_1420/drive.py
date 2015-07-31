@@ -205,6 +205,7 @@ class Drive():
         
         # construct a command string
         command_str = "gh {} {}".format(skycoord.az, skycoord.alt)
+        print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
             # We need to do more here than just check the command has
