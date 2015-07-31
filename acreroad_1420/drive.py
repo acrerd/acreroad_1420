@@ -47,7 +47,7 @@ class Drive():
     
 
     
-    def __init__(self, device, baud, timeout=2, simulate=0, calibration=None, location=None):
+    def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=None):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -82,7 +82,7 @@ class Drive():
         
         """
         self.sim = simulate
-
+        self.timeout = timeout
         # Initialise the connection
         if not self.sim: self._openconnection(device, baud)
         
@@ -92,7 +92,7 @@ class Drive():
         self.setLocation(location)
         pass
 
-    def _openconnection(self, device, baud, timeout=2):
+    def _openconnection(self, device, baud, timeout=self.timeout):
         self.ser = serial.Serial(device, baud, timeout=timeout)
 
     def _command(self, string):
