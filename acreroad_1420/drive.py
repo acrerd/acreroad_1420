@@ -194,26 +194,26 @@ class Drive():
         # controller (it is theoretically possible to do ALTAZ too,
         # but let's start simple, eh?')
 
-        skycoord = skycoord.transform_to(frame=ICRS)
+        #skycoord = skycoord.transform_to(frame=ICRS)
 
         time = Time.now()
         
-        ra  = skycoord.ra
-        dec = skycoord.dec
+        #ra  = skycoord.ra
+        #dec = skycoord.dec
 
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
         
         # construct a command string
-        command_str = "gh {} {}".format(skycoord.az.value, skycoord.alt.value)
+        command_str = "gh {0.az.value:.2} {0.alt.value:.2}".format(skycoord)
         print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
             # We need to do more here than just check the command has
             # passed successfully; we need to check the telescope is
             # (or thinks it is) pointing where we asked.
-            if self.sim:
-                self.ra  = ra
-                self.dec = dec
+            #if self.sim:
+                #self.ra  = ra
+                #self.dec = dec
             
             # If the command completes then set the controller to track the object
             if track:    
