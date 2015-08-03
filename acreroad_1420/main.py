@@ -29,6 +29,15 @@ class mainWindow(QtGui.QMainWindow):
         self.antennaCoordsInfo = antennaCoordsInfo(self)
         self.sourceInfo = sourceInfo(self)
         
+        self.infoTimer = QtCore.QTimer(self)
+        self.infoTimer.timeout.connect(self.skymap.updateSkymap)
+        self.infoTimer.start(250)
+        
+        self.sourceTimer = QtCore.QTimer(self)
+        self.sourceTimer.timeout.connect(self.skymap.fetchRadioSourceCoordinates)
+        self.sourceTimer.start(60000)
+
+        
     def updateStatusBar(self,status):
         """
         Update the text of the status bar with the string status.
