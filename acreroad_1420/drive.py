@@ -174,8 +174,8 @@ class Drive():
             # Assume we're at Acre Road, in Glasgow
             location = self.acre_road
 
-        latitude  = location.latitude
-        longitude = location.longitude    
+        latitude  = location.latitude.value
+        longitude = location.longitude.value    
 
         # Construct the command
         command_str = "O {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
