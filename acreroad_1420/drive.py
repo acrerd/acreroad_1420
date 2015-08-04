@@ -135,6 +135,8 @@ class Drive():
     def _listener(self):
         while True:
             line = self.ser.readline()
+            self.parse(line)
+            print line
             
     def parse(self, string):
         if string[0]==">": # This is a specific output
@@ -170,7 +172,7 @@ class Drive():
         """
         time = datetime.datetime.utcnow()
 
-        command_str = "T {:.4f} {:.4f} {:.4f} {:.6f} {:.4f} {:.4f}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
+        command_str = "T {} {} {} {} {} {}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
 
         return self._command(command_str)
 
@@ -225,7 +227,7 @@ class Drive():
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
         
         # construct a command string
-        command_str = "gh {0.az.value:.2f} {0.alt.value:.2f}".format(skycoord)
+        command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
