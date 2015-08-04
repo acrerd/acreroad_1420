@@ -75,7 +75,7 @@ class SRT():
         delay = 0.01
         self.status = Status.SLEWING
         if self.mode == Mode.SIM:
-            print("Slewing in sim mode.")
+            #print("Slewing in sim mode.")
             (xf,yf) = pos # target position in degrees
             x = int(xf)
             y = int(yf)
@@ -88,32 +88,24 @@ class SRT():
                 for i in reversed(range(x,cx)):
                     self.setCurrentPos((i,cy))
                     skymap.setCurrentPos((i,cy))
-                    skymap.update()
-                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif x > cx:
                 for i in range(cx,x+1):
                     self.setCurrentPos((i,cy))
                     skymap.setCurrentPos((i,cy))
-                    skymap.update()
-                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
             if y < cy:
                 for i in reversed(range(y,cy)):
                     self.setCurrentPos((x,i))
                     skymap.setCurrentPos((x,i))
-                    skymap.update()
-                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif y > cy:
                 for i in range(cy,y+1):
                     self.setCurrentPos((x,i))
                     skymap.setCurrentPos((x,i))
-                    skymap.update()
-                    skymap.parent().antennaCoordsInfo.update()
                     QtGui.QApplication.processEvents()
                     time.sleep(delay)
         else:
@@ -130,11 +122,9 @@ class SRT():
             altazframe = AltAz(x,y,obstime=now,location=acreRoadAstropy)
             skycoord = SkyCoord(altazframe)        
             self.drive.goto(skycoordazel)
-            skymap.setCurrentPos((az,el)) # for updating onscreen position -- maybe this should be done in paintevent() and called every few seconds?
-            skymap.update()
-            skymap.parent().antennaCoordsInfo.update()
+            skymap.setCurrentPos((az,el)) # for updating onscreen position as paintEvent() needs this value.
             QtGui.QApplication.processEvents()
-        print("Finished slewing to " + str(self.getCurrentPos()))
+        #print("Finished slewing to " + str(self.getCurrentPos()))
         self.status = Status.READY
         
     def stow(self,pos=(0,90)):
@@ -151,7 +141,7 @@ class SRT():
         The SRT will follow the source as it move across the sky.
         """
         if self.mode == Mode.SIM:
-            print("Tracking " + src.getName())
+            #print("Tracking " + src.getName())
             pos = src.getPos()
             self.slew(skymap,pos)
             self.status = Status.TRACKING

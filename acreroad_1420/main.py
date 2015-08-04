@@ -13,6 +13,9 @@ class TrackToggle:
     OFF = 1
 
 class mainWindow(QtGui.QMainWindow):
+    """
+    Container class for the whole main window.  Container classes for other widgets such as buttons and labels are constructed here.
+    """
     def __init__(self, srt, parent=None):
         super(mainWindow,self).__init__(parent=parent)
         self.setGeometry(50,50,600,800)
@@ -20,17 +23,25 @@ class mainWindow(QtGui.QMainWindow):
         self.setFocus()
         self.srt = srt
         self.skymap = Skymap(self)
-        #self.skymap.setCurrentPos(self.srt.getCurrentPos())
-        self.skymap.init()
-        self.updateStatusBar("This is the status bar.")
+        self.skymap.init() # this must be called to get the current position of srt to diplay it on the skymap.
+        self.updateStatusBar("Loading ...")
         self.commandButtons = commandButtons(self)
         self.antennaCoordsInfo = antennaCoordsInfo(self)
         self.sourceInfo = sourceInfo(self)
-        #self.buttonLayout = buttonLayout(self)
-        #self.setCentralWidget(self.formWidget)
-        #self.mode = Mode.SIM # default
+        
+        self.infoTimer = QtCore.QTimer(self)
+        self.infoTimer.timeout.connect(self.skymap.updateSkymap)
+        self.infoTimer.start(250)
+        
+        self.sourceTimer = QtCore.QTimer(self)
+        self.sourceTimer.timeout.connect(self.skymap.fetchRadioSourceCoordinates)
+        self.sourceTimer.start(60000)
+
         
     def updateStatusBar(self,status):
+        """
+        Update the text of the status bar with the string status.
+        """
         self.statusBar().showMessage(str(status))
         
     def getSRT(self):
@@ -43,6 +54,9 @@ class mainWindow(QtGui.QMainWindow):
         return self.mode
 
 class antennaCoordsInfo(QtGui.QWidget):
+    """
+    Container class for the widget which displays antenna coordinate information and offsets etc.
+    """
     def __init__(self,parent):
         super(antennaCoordsInfo,self).__init__(parent)
         self.setGeometry(250,0,200,250)
@@ -55,20 +69,26 @@ class antennaCoordsInfo(QtGui.QWidget):
         self.posLabel = QtGui.QLabel("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
         layout.addWidget(self.posLabel)
 
-        self.radecLabel = QtGui.QLabel("Ra Dec: ")
+        self.radecLabel = QtGui.QLabel("Ra Dec: todo ")
         layout.addWidget(self.radecLabel)
         
-        self.galLabel = QtGui.QLabel("Gal: ")
+        self.galLabel = QtGui.QLabel("Gal: todo")
         layout.addWidget(self.galLabel)        
 
         gb.setLayout(layout)
 
     def update(self):
+        """
+        Update is called when the on screen antenna coordinate information should be updated to new values.
+        """
         self.posLabel.setText("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
         #self.radecLabel.setText()
         #self.galLabel.setText()
 
 class sourceInfo(QtGui.QWidget):
+    """
+    A container class for displaying the information about a selected radio source on the skymap.
+    """
     def __init__(self,parent):
         super(sourceInfo,self).__init__(parent)
         self.setGeometry(0,275,600,100)
@@ -93,6 +113,9 @@ class sourceInfo(QtGui.QWidget):
         gb.setLayout(layout)
 
     def updateEphemLabel(self,src):
+        """
+        Whenever it is required to update information about a radio source src.
+        """
         name = src.getName()
         pos = src.getPos()
         #radec = src.getRADEC()
@@ -103,6 +126,9 @@ class sourceInfo(QtGui.QWidget):
         #self.galLabel.setText()
 
 class commandButtons(QtGui.QWidget):
+    """
+    Container class for the buttons on the main windows which (usually) instruct the SRT to do something.
+    """
     def __init__(self,parent):
         super(commandButtons,self).__init__(parent)
         self.setGeometry(0,0,150,200)
@@ -165,6 +191,9 @@ class commandButtons(QtGui.QWidget):
             print("Slew toggle ON")
 
     def handleSlewToCoordButton(self):
+        """
+        An input window will be presented where AzEl coordinates are required to be input.  The SRT will then slew to these coordinates.
+        """
         azel, ok = QtGui.QInputDialog.getText(self, 'Input', 
             'Enter Az El:')
         

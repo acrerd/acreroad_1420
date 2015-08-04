@@ -13,6 +13,9 @@ class SlewToggle:
     OFF = 1
 
 class Skymap(QtGui.QWidget):
+    """
+    The skymap is a widget which plots axes and draws radio sources read in by the catalogue file.
+    """
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent=parent)
         x,y,w,h = (0,400,600,300) #probably should be passed as argument in constructor
@@ -32,13 +35,15 @@ class Skymap(QtGui.QWidget):
         self.targetPos = (0,0) # likewise
 
         self.radioSources = []
+        self.clickedSource = ""
 
     def init(self):
+        """
+        Required to set the initial pointing position and read in the contents of the source catalogue file.  Also setup the timer for retrieving the radio source catalogue information.
+        """
         self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue()
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self.updateBackEnd)
-        timer.start(20000) # every 20 secs, get updated position information of all radio sources and re-draw them.
+        self.srt.setStatus(Status.READY)
 
     def paintEvent(self, event):
         qp = QtGui.QPainter()
@@ -49,21 +54,28 @@ class Skymap(QtGui.QWidget):
         self.drawTargetPosCrosshair(qp)
         qp.end()
 
-    def updateBackEnd(self):
+    def fetchRadioSourceCoordinates(self):
         """
-        For each loaded radio source, call its update method to calculate its most current coordinates.
+        For each loaded radio source, call its update method to calculate its most current coordinates. TODO: tracking
         """
         for src in self.radioSources:
             src.update()
-        self.update()
+
+    def updateSkymap(self):
+        self.parent().antennaCoordsInfo.update()
+        if self.clickedSource != "" and type(self.clickedSource) != int:
+            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
         if self.srt.getStatus() == Status.TRACKING:
             source = self.getClickedSource() 
             self.srt.track(self,source)
         self.updateStatusBar()
-        self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
-        QtGui.QApplication.processEvents()
+        self.update()
+        QtGui.QApplication.processEvents() # i _think_ this calls self.paintEvent()
         
     def updateStatusBar(self):
+        """
+        Update the status bar with the current SRT status.
+        """
         status = self.srt.getStatus()
         if status == Status.INIT:
             self.parent().updateStatusBar("Status: Initialising")
@@ -124,8 +136,10 @@ class Skymap(QtGui.QWidget):
         self.clickedSource = self.checkClickedSource((x,y),4)
         if self.clickedSource != 0:
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
+            targetPos = self.clickedSource.getPos()
+        else:
+            targetPos = self.pixelToDegree((x,y))
 
-        targetPos = self.pixelToDegree((x,y))
         currentPos = self.currentPos
         state = self.srt.getStatus()
         slewToggle = self.parent().commandButtons.getSlewToggle()
@@ -250,7 +264,7 @@ class Skymap(QtGui.QWidget):
             name = src.getName()
             pos = src.getPos()
             if src.isVisible() == True:
-                #print("Source pos: " + str(pos))
+                #print("%s pos: %s" % (name,pos))
                 self.drawObject(qp,pos,name)
             else:
                 #print(name + " is not visible currently.")
