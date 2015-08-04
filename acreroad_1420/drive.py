@@ -31,6 +31,8 @@ from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
 import astropy.units as u
 import serial
 from astropy.time import Time
+import threading
+
 
 class Drive():
 
@@ -92,7 +94,8 @@ class Drive():
         self.setTime()
         
         self.setLocation(location)
-        pass
+
+        self.listen_thread =  threading.Thread(target=self._listener)
 
     def _openconnection(self, device, baud):
         self.ser = serial.Serial(device, baud, timeout=self.timeout)
@@ -123,7 +126,11 @@ class Drive():
             if ret_line: return ret_line
             else : return 1
         
-        
+    def listner(self):
+        while True:
+            print self._ser.readline()
+            
+            
     def calibrate(self, values=None):
         """
         Carries-out a calibration run, returning two numbers which are offsets, or sets the calibration if known values are provided.
