@@ -128,7 +128,7 @@ class Drive():
         
     def _listener(self):
         while True:
-            print self._ser.readline()
+            print self.ser.readline()
             
             
     def calibrate(self, values=None):
