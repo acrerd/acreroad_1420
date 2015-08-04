@@ -115,7 +115,7 @@ class Drive():
         if not self.com_format.match(string):
             raise ValueError(string+" : This string doesn't have the format of a valid controller command.'")
 
-        
+        print string
         if self.sim:
             print("In simulation mode, command ignored.")
             return 1
@@ -158,7 +158,7 @@ class Drive():
         """
         time = datetime.datetime.utcnow()
 
-        command_str = "T {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
+        command_str = "T {:.4f} {:.4f} {:.4f} {:.6f} {:.4f} {:.4f}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
 
         return self._command(command_str)
 
@@ -178,7 +178,7 @@ class Drive():
         longitude = location.longitude    
 
         # Construct the command
-        command_str = "O {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
+        command_str = "O {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
         return self._command(command_str)
 
     def goto(self, skycoord, track=True):
