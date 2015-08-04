@@ -43,12 +43,15 @@ class Drive():
     ra = 0
     dec = 0
 
+    az = 0
+    alt = 0
+
     # String formats
 
     com_format = re.compile("[A-Za-z]{1,2} ?([-+]?[0-9]{0,4}\.[0-9]{0,8} ?){0,6}") # general command string format
     cal_format = re.compile("[0-9]{3} [0-9]{3}") # calibration string format
     
-
+    stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
     
     def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=acre_road):
         """
@@ -131,8 +134,14 @@ class Drive():
         
     def _listener(self):
         while True:
-            print self.ser.readline()
+            line = self.ser.readline()
             
+    def parse(self, string):
+        if string[0]==">": # This is a specific output
+            if [1]=="S": # This is a status string
+                d = dict(stat_format.findall(string[2:])) #
+                self.azimuth, self.altitude = d['Taz'], d['Talt']
+                return d
             
     def calibrate(self, values=None):
         """
