@@ -149,8 +149,8 @@ class Drive():
             # Check the format of the values string.
             if self.cal_format.match(values):
                 return self._command("c "+values)
-            else:
-                return self._command("c")
+        else:
+            return self._command("c")
         pass
 
     def setTime(self):
