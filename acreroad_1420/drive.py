@@ -115,7 +115,7 @@ class Drive():
         if not self.com_format.match(string):
             raise ValueError(string+" : This string doesn't have the format of a valid controller command.'")
 
-        print string
+        
         if self.sim:
             print("In simulation mode, command ignored.")
             return 1
@@ -124,9 +124,10 @@ class Drive():
             self.ser.write(string.encode('ascii'))
 
             # Retrieve the return message from the controller
-            ret_line =  self.ser.readline()
-            if ret_line: return ret_line
-            else : return 1
+            #ret_line =  self.ser.readline()
+            #if ret_line: return ret_line
+            #else : return 1
+            return 1
         
     def _listener(self):
         while True:
