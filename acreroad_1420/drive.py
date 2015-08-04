@@ -144,11 +144,13 @@ class Drive():
            The calibration values produced by a previous calibration run of the telescope, provided in the format "nnn nnn"
 
         """
-        if values:
+        if self.sim: return ">c 000 000"
+        if values:                      
             # Check the format of the values string.
             if self.cal_format.match(values):
                 return self._command("c "+values)
-        if self.sim: return ">c 000 000"
+            else:
+                return self._command("c")
         pass
 
     def setTime(self):
