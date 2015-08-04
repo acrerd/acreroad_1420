@@ -140,7 +140,7 @@ class Drive():
         if string[0]==">": # This is a specific output
             if [1]=="S": # This is a status string
                 d = dict(stat_format.findall(string[2:])) #
-                self.azimuth, self.altitude = d['Taz'], d['Talt']
+                self.az, self.alt = d['Taz'], d['Talt']
                 return d
             
     def calibrate(self, values=None):
@@ -275,7 +275,7 @@ class Drive():
         """
         command_str = "S"
         self._command(command_str)
-        return {'ra':self.ra, 'dec': self.dec, 'alt':0, 'az':0}
+        return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt, 'az':self.az}
 
 
 class ControllerException(Exception):
