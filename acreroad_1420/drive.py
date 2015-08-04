@@ -136,7 +136,7 @@ class Drive():
         while True:
             line = self.ser.readline()
             self.parse(line)
-            #print line
+            print line
             
     def parse(self, string):
         if string[0]==">": # This is a specific output
