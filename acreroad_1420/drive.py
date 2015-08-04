@@ -158,7 +158,7 @@ class Drive():
         """
         time = datetime.datetime.utcnow()
 
-        command_str = "T {} {} {} {} {} {}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
+        command_str = "T {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
 
         return self._command(command_str)
 
@@ -178,7 +178,7 @@ class Drive():
         longitude = location.longitude    
 
         # Construct the command
-        command_str = "O {} {} {} {} {} {}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
+        command_str = "O {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
         return self._command(command_str)
 
     def goto(self, skycoord, track=True):
