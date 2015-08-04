@@ -225,7 +225,7 @@ class Drive():
         #dec = skycoord.dec
 
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
-        
+        self.status()
         # construct a command string
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         print command_str
