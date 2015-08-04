@@ -2,7 +2,7 @@ import sys, argparse
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
 from srt import SRT, Status, Mode
-from radiosource import RadioSource
+from radiosource import RadioSource,radec,galactic
 
 class SlewToggle:
     ON = 0
@@ -24,14 +24,14 @@ class mainWindow(QtGui.QMainWindow):
         self.srt = srt
         self.skymap = Skymap(self)
         self.skymap.init() # this must be called to get the current position of srt to diplay it on the skymap.
-        self.updateStatusBar("Loading ...")
+
         self.commandButtons = commandButtons(self)
         self.antennaCoordsInfo = antennaCoordsInfo(self)
         self.sourceInfo = sourceInfo(self)
         
         self.infoTimer = QtCore.QTimer(self)
         self.infoTimer.timeout.connect(self.skymap.updateSkymap)
-        self.infoTimer.start(250)
+        self.infoTimer.start(100)
         
         self.sourceTimer = QtCore.QTimer(self)
         self.sourceTimer.timeout.connect(self.skymap.fetchRadioSourceCoordinates)
@@ -73,17 +73,24 @@ class antennaCoordsInfo(QtGui.QWidget):
         layout.addWidget(self.radecLabel)
         
         self.galLabel = QtGui.QLabel("Gal: todo")
-        layout.addWidget(self.galLabel)        
+        layout.addWidget(self.galLabel)
+
+        self.utcLabel = QtGui.QLabel("UTC: todo")
+        layout.addWidget(self.utcLabel)
 
         gb.setLayout(layout)
 
-    def update(self):
+    def updateCoords(self):
         """
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
-        self.posLabel.setText("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
-        #self.radecLabel.setText()
-        #self.galLabel.setText()
+        currentPos = self.parent().getSRT().getCurrentPos()
+        self.posLabel.setText("AzEl: " + "%.2f %.2f" % currentPos)
+        self.radecLabel.setText("RaDec: " + "%.2f %.2f" % radec(currentPos))
+        self.galLabel.setText("Gal: " + "%.2f %.2f" % galactic(currentPos))
+
+    def tick(self):
+        pass
 
 class sourceInfo(QtGui.QWidget):
     """
@@ -164,6 +171,11 @@ class commandButtons(QtGui.QWidget):
         layout.addWidget(trackButton)
         trackButton.clicked.connect(self.handleTrackButton)
 
+        calibrateButton = QtGui.QPushButton("Calibrate")
+        calibrateButton.setFixedWidth(buttonWidth)
+        layout.addWidget(calibrateButton)
+        calibrateButton.clicked.connect(self.handleCalibrateButton)
+
         gb.setLayout(layout)
 
         self.trackSource = RadioSource("ts")
@@ -214,7 +226,26 @@ class commandButtons(QtGui.QWidget):
                 valid = True
             # slew to coords
             if valid:
-                self.parent().srt.slew(self.parent().skymap,(azf,elf))
+                #self.parent().srt.slew(self.parent().skymap,(azf,elf))
+                currentPos = self.parent().srt.getCurrentPos()
+                targetPos = (azf,elf)
+                state = self.parent().srt.getStatus()
+                if state != Status.SLEWING:
+                    if targetPos == currentPos:
+                        print("Already at that position.")
+                        #self.targetPos = currentPos
+                        self.parent().skymap.setTargetPos(currentPos)
+                        self.srt.setStatus(Status.READY)
+                    else:
+                        print("Slewing to " + str(targetPos))
+                        self.parent().srt.setStatus(Status.SLEWING)
+                        self.parent().updateStatusBar()
+                        self.parent().srt.slew(self,targetPos)
+                        #self.currentPos = targetPos
+                        self.parent().skymap.setCurrentPos(targetPos)
+                        self.parent().updateStatusBar()
+                else:
+                    print("Already Slewing.  Please wait until finished.")
                 
     def handleTrackButton(self):
         """
@@ -228,6 +259,10 @@ class commandButtons(QtGui.QWidget):
             self.trackToggle = TrackToggle.OFF
             print("Track Toggle OFF")
             self.parent().srt.setStatus(Status.READY)
+
+    def handleCalibrateButton(self):
+        self.parent().srt.calibrate()
+        #print("Not implemented yet ...")
 
     def getSlewToggle(self):
         return self.slewToggle
@@ -252,7 +287,8 @@ def run():
         print("Simulation mode enabled.")
         mode = Mode.SIM
 
-    srt = SRT(mode)
+    device = "/dev/ttyACM2"
+    srt = SRT(mode,device)
     main = mainWindow(srt)
 
     main.show()

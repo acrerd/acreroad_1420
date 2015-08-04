@@ -28,18 +28,18 @@ class Skymap(QtGui.QWidget):
         p.setColor(self.backgroundRole(), QtGui.QColor("white"))
         self.setPalette(p)
 
-        self.coordinateSystem = CoordinateSystem.AZEL
+        self.coordinateSystem = CoordinateSystem.AZEL # default coordinate system
         self.srt = self.parent().getSRT()
 
-        self.currentPos = (0,0) # this should always be in degrees
+        self.currentPos = (0,0) # this should always be in azel degrees
         self.targetPos = (0,0) # likewise
 
-        self.radioSources = []
-        self.clickedSource = ""
+        self.radioSources = [] # the list of radio source from radiosources.cat
+        self.clickedSource = ""  # name of last clicked source
 
     def init(self):
         """
-        Required to set the initial pointing position and read in the contents of the source catalogue file.  Also setup the timer for retrieving the radio source catalogue information.
+        Required to set the initial pointing position, initial status and read in the contents of the source catalogue file.
         """
         self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue()
@@ -62,12 +62,26 @@ class Skymap(QtGui.QWidget):
             src.update()
 
     def updateSkymap(self):
-        self.parent().antennaCoordsInfo.update()
+        targetPos = self.targetPos
+        if self.srt.getMode() == Mode.SIM:
+            self.setCurrentPos(self.srt.getCurrentPos())
+        elif self.srt.getMode() == Mode.LIVE:
+            #print(self.srt.azalt())
+            self.setCurrentPos(self.srt.azalt())
+
+        if self.srt.getStatus() == Status.SLEWING:
+            if self.srt.slewSuccess(targetPos) == True:
+                self.srt.setStatus(Status.READY)
+
+        self.parent().antennaCoordsInfo.updateCoords()
+
         if self.clickedSource != "" and type(self.clickedSource) != int:
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
+
         if self.srt.getStatus() == Status.TRACKING:
             source = self.getClickedSource() 
             self.srt.track(self,source)
+
         self.updateStatusBar()
         self.update()
         QtGui.QApplication.processEvents() # i _think_ this calls self.paintEvent()
@@ -116,9 +130,8 @@ class Skymap(QtGui.QWidget):
         (x,y) = clickedPos
         for src in self.radioSources:
             (sx,sy) = src.getPos()
-            if (abs(self.pixelToDegreeX(x) - sx)) < r and (abs(self.pixelToDegreeY(y) - sy)) < r:
+            if (abs(x - sx)) < r and (abs(y - sy)) < r:
                 name = src.getName()
-                print("You clicked: " + name)
                 return src
             else:
                 check = 0
@@ -130,32 +143,45 @@ class Skymap(QtGui.QWidget):
         Event handler for when the cursor is clicked on the skymap area.
         """
         cursor = QtGui.QCursor()
-        x = self.mapFromGlobal(cursor.pos()).x()
-        y = self.mapFromGlobal(cursor.pos()).y()
-                
-        self.clickedSource = self.checkClickedSource((x,y),4)
-        if self.clickedSource != 0:
-            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
-            targetPos = self.clickedSource.getPos()
-        else:
-            targetPos = self.pixelToDegree((x,y))
+        xf = self.mapFromGlobal(cursor.pos()).x()
+        yf = self.mapFromGlobal(cursor.pos()).y()
+        (cxf,cyf) = self.currentPos
 
-        currentPos = self.currentPos
+        # in simulation mode, the coordinate are rounded to integers.
+        if self.srt.getMode() == Mode.SIM:
+            x = int(self.pixelToDegreeX(xf))
+            y = int(self.pixelToDegreeY(yf))
+            currentPos = (int(cxf),int(cyf))
+        elif self.srt.getMode() == Mode.LIVE:
+            x = self.pixelToDegreeX(xf)
+            y = self.pixelToDegreeY(yf)
+            currentPos = (cxf,cyf)
+
+        #print(x,y)
+        self.clickedSource = self.checkClickedSource((x,y),4)
+        #print(self.clickedSource)
+        if self.clickedSource != 0:
+            #print(self.clickedSource.getName())
+            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
+            self.targetPos = self.clickedSource.getPos()
+        else:
+            self.targetPos = (x,y)
+
         state = self.srt.getStatus()
         slewToggle = self.parent().commandButtons.getSlewToggle()
         if slewToggle == SlewToggle.ON:
             if state != Status.SLEWING:
-                self.targetPos = targetPos
-                if targetPos == currentPos:
+                #self.targetPos = targetPos
+                if self.targetPos == currentPos:
                     print("Already at that position.")
                     self.targetPos = currentPos
                     self.srt.setStatus(Status.READY)
                 else:
-                    print("Slewing to " + str(targetPos))
+                    print("Slewing to " + str(self.targetPos))
                     self.srt.setStatus(Status.SLEWING)
                     self.updateStatusBar()
-                    self.srt.slew(self,targetPos)
-                    self.currentPos = targetPos
+                    self.srt.slew(self,self.targetPos)
+                    #self.currentPos = targetPos
                     self.updateStatusBar()
             else:
                 print("Already Slewing.  Please wait until finished.")
@@ -356,6 +382,9 @@ class Skymap(QtGui.QWidget):
             print(src.getName())
 
     def readCatalogue(self):
+        """
+        Reads radio sources from the catalogue file, constructs RadioSource class for each source, gets its coordinates and adds it to the radiosources array.
+        """
         fname = "radiosources.cat"
         fpath = "./"
         f = open(fpath+fname,"r")
