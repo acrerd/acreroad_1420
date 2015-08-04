@@ -263,6 +263,8 @@ class Drive():
         >>> ra = self.connection.status()['ra'].value
         
         """
+        command_str = "S"
+        self._command(command_str)
         return {'ra':self.ra, 'dec': self.dec, 'alt':0, 'az':0}
 
 
