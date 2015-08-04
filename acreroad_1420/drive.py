@@ -96,6 +96,8 @@ class Drive():
         self.setLocation(location)
 
         self.listen_thread =  threading.Thread(target=self._listener)
+        self.listen_thread.daemon = True
+        self.listen_thread.start()
 
     def _openconnection(self, device, baud):
         self.ser = serial.Serial(device, baud, timeout=self.timeout)
