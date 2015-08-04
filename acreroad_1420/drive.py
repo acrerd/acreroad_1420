@@ -126,7 +126,7 @@ class Drive():
             if ret_line: return ret_line
             else : return 1
         
-    def listner(self):
+    def _listner(self):
         while True:
             print self._ser.readline()
             
