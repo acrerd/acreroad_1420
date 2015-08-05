@@ -45,12 +45,13 @@ class RadioSource():
         try:
             source = SkyCoord.from_name(self.name)
         except astropy.coordinates.name_resolve.NameResolveError:
-            return
+            return False
         self.exists = True
         now = Time(time.time(),format='unix')
         altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
         sourcealtaz = source.transform_to(altazframe)
         self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
+        return True
 
     def update(self):
         """

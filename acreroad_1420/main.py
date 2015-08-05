@@ -1,8 +1,9 @@
-import sys, argparse
+import sys, argparse, ConfigParser, time
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
 from srt import SRT, Status, Mode
 from radiosource import RadioSource,radec,galactic
+from astropy.time import Time
 
 class SlewToggle:
     ON = 0
@@ -16,14 +17,14 @@ class mainWindow(QtGui.QMainWindow):
     """
     Container class for the whole main window.  Container classes for other widgets such as buttons and labels are constructed here.
     """
-    def __init__(self, srt, parent=None):
+    def __init__(self, srt, catalogue, parent=None):
         super(mainWindow,self).__init__(parent=parent)
         self.setGeometry(50,50,600,800)
         self.setWindowTitle("SRT Drive Control")
         self.setFocus()
         self.srt = srt
         self.skymap = Skymap(self)
-        self.skymap.init() # this must be called to get the current position of srt to diplay it on the skymap.
+        self.skymap.init(catalogue) # this must be called to get the current position of srt to diplay it on the skymap.
 
         self.commandButtons = commandButtons(self)
         self.antennaCoordsInfo = antennaCoordsInfo(self)
@@ -84,13 +85,13 @@ class antennaCoordsInfo(QtGui.QWidget):
         """
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
-        currentPos = self.parent().getSRT().getCurrentPos()
+        currentPos = self.parent().skymap.getCurrentPos()
         self.posLabel.setText("AzEl: " + "%.2f %.2f" % currentPos)
         self.radecLabel.setText("RaDec: " + "%.2f %.2f" % radec(currentPos))
         self.galLabel.setText("Gal: " + "%.2f %.2f" % galactic(currentPos))
 
     def tick(self):
-        pass
+        self.utcLabel.setText("UTC: " + time.strftime("%d %b %y %H:%M:%S",time.gmtime()))
 
 class sourceInfo(QtGui.QWidget):
     """
@@ -152,6 +153,11 @@ class commandButtons(QtGui.QWidget):
         layout.addWidget(stowButton)
         stowButton.clicked.connect(self.handleStowButton)
 
+        homeButton = QtGui.QPushButton("Home")
+        homeButton.setFixedWidth(buttonWidth)
+        layout.addWidget(homeButton)
+        homeButton.clicked.connect(self.handleHomeButton)
+
         self.slewToggle = SlewToggle.OFF
         slewButton = QtGui.QPushButton("Slew Toggle")
         slewButton.setFixedWidth(buttonWidth)
@@ -188,6 +194,11 @@ class commandButtons(QtGui.QWidget):
     def handleStowButton(self):
         """
         Returns the SRT to its stow position.
+        """
+        pass
+
+    def handleHomeButton(self):
+        """
         """
         pass
 
@@ -239,11 +250,11 @@ class commandButtons(QtGui.QWidget):
                     else:
                         print("Slewing to " + str(targetPos))
                         self.parent().srt.setStatus(Status.SLEWING)
-                        self.parent().updateStatusBar()
+                        #self.parent().updateStatusBar()
                         self.parent().srt.slew(self,targetPos)
                         #self.currentPos = targetPos
                         self.parent().skymap.setCurrentPos(targetPos)
-                        self.parent().updateStatusBar()
+                        #self.parent().updateStatusBar()
                 else:
                     print("Already Slewing.  Please wait until finished.")
                 
@@ -287,9 +298,14 @@ def run():
         print("Simulation mode enabled.")
         mode = Mode.SIM
 
-    device = "/dev/ttyACM2"
+    # parse the _simple_ config file
+    config = ConfigParser.SafeConfigParser()
+    config.read('settings.cfg')
+    device = config.get('arduino','dev')
+    catalogue = config.get('catalogue','catfile')
+
     srt = SRT(mode,device)
-    main = mainWindow(srt)
+    main = mainWindow(srt,catalogue)
 
     main.show()
     sys.exit(app.exec_())

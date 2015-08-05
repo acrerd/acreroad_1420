@@ -25,7 +25,7 @@ simulate : bool
 """
 
 import re, datetime
-
+import numpy as np
 import astropy
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
 import astropy.units as u
@@ -149,8 +149,7 @@ class Drive():
         elif string[0]=="s":
             # Status strings are comma separated
             d = string[2:].split(",")
-            self.az, self.alt = d[3]*(180/np.pi), d[4]*(180/np.pi)
-            print "Status: "+d
+            self.az, self.alt = float(d[3])*(180/np.pi), float(d[4])*(180/np.pi)
             return d
         elif string[0]=="!":
             # This is an error string

@@ -54,6 +54,7 @@ class SRT():
         """
         status = self.drive.status()
         az,alt = status['az'],status['alt']
+        #print("status " + "%f %f" % (az,alt))
         return (az,alt)
 
     def radec(self):

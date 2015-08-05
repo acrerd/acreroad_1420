@@ -37,12 +37,12 @@ class Skymap(QtGui.QWidget):
         self.radioSources = [] # the list of radio source from radiosources.cat
         self.clickedSource = ""  # name of last clicked source
 
-    def init(self):
+    def init(self,catalogue):
         """
         Required to set the initial pointing position, initial status and read in the contents of the source catalogue file.
         """
         self.currentPos = self.srt.getCurrentPos()
-        self.readCatalogue()
+        self.readCatalogue(catalogue)
         self.srt.setStatus(Status.READY)
 
     def paintEvent(self, event):
@@ -68,12 +68,16 @@ class Skymap(QtGui.QWidget):
         elif self.srt.getMode() == Mode.LIVE:
             #print(self.srt.azalt())
             self.setCurrentPos(self.srt.azalt())
+            
+        print(self.getCurrentPos())
 
+        # potential problem here if the telescope never reaches its destination then the status will never be ready and a hard reset is required.
         if self.srt.getStatus() == Status.SLEWING:
             if self.srt.slewSuccess(targetPos) == True:
                 self.srt.setStatus(Status.READY)
 
         self.parent().antennaCoordsInfo.updateCoords()
+        self.parent().antennaCoordsInfo.tick()
 
         if self.clickedSource != "" and type(self.clickedSource) != int:
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
@@ -381,11 +385,11 @@ class Skymap(QtGui.QWidget):
         for src in self.radioSources:
             print(src.getName())
 
-    def readCatalogue(self):
+    def readCatalogue(self,catalogue):
         """
         Reads radio sources from the catalogue file, constructs RadioSource class for each source, gets its coordinates and adds it to the radiosources array.
         """
-        fname = "radiosources.cat"
+        fname = str(catalogue)
         fpath = "./"
         f = open(fpath+fname,"r")
         print("Using catalogue file: %s" % f.name)
@@ -405,12 +409,25 @@ class Skymap(QtGui.QWidget):
                 print(line + " - OK.")
             else:
                 src = RadioSource(name)
-                src.lookupAstropy()
-                if src.getExists() == True:
-                    print(line + " - OK.")
-                    self.radioSources.append(src)
+                chk = src.lookupAstropy()
+                if chk == True:
+                    # found the source online
+                    if src.getExists() == True:
+                        print(line + " - OK.")
+                        self.radioSources.append(src)
+                    else:
+                        print(line + " - Fail.")
                 else:
-                    print(line + " - Fail.")
+                    # can't find source online - maybe internet is down - use radec coords if supplied
+                    lineList = line.rstrip().split()
+                    if len(lineList) > 1:
+                        name = lineList[0]
+                        ra = lineList[1]
+                        dec = lineList[2]
+                        print(name,ra,dec)
+                        # what if the source name ias a space e.g. cass A
+                    else:
+                        print(line + " - Fail.")
         f.close()
 
     
