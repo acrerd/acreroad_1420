@@ -94,6 +94,9 @@ class Drive():
         if not self.sim: self._openconnection(device, baud)
         
         self.calibrate(calibration)
+        self.home()
+
+
         self.setTime()
         
         self.setLocation(location)
