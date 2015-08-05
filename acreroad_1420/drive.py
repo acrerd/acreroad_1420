@@ -136,14 +136,29 @@ class Drive():
         while True:
             line = self.ser.readline()
             self.parse(line)
-            print line
+            #print line
             
     def parse(self, string):
-        if string[0]==">": # This is a specific output
-            if [1]=="S": # This is a status string
+        # A specific output from a function
+        if string[0]==">":
+            if [1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
                 self.az, self.alt = d['Taz'], d['Talt']
                 return d
+        # A status string
+        elif string[0]=="s":
+            # Status strings are comma separated
+            d = string[2:].split(",")
+            self.az, self.alt = d[3]*(180/np.pi), d[4]*(180/np.pi)
+            print "Status: "+d
+            return d
+        elif string[0]=="!":
+            # This is an error string
+            print string[1:]
+        elif string[0]=="#":
+            # This is a comment string
+            pass
+                
             
     def calibrate(self, values=None):
         """
