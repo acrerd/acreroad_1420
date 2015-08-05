@@ -1,7 +1,7 @@
 import astropy, math
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS, Galactic
 import time, ephem
 
 
@@ -67,7 +67,6 @@ class RadioSource():
             sourcealtaz = source.transform_to(altazframe)
             self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
 
-
     def isVisible(self):
         """
         """
@@ -76,7 +75,6 @@ class RadioSource():
             return False
         else:
             return True
-
 
     def getExists(self):
         return self.exists
@@ -95,3 +93,22 @@ class RadioSource():
 
     def setName(self,name):
         self.name = name
+
+
+
+def radec(azel):
+    """
+    Return current coordinate in right ascention and declination.
+    """
+    (az,el) = azel
+    now = Time(time.time(),format='unix')
+    acreRoad = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+    azelframe = AltAz(az*u.deg,el*u.deg,obstime=now,location=acreRoad)
+    source = SkyCoord(azelframe)
+    radecframe = ICRS()
+    radec = source.transform_to(radecframe)
+    return (float(radec.ra.hour),float(radec.dec.degree))
+
+
+def galactic(azel):
+    return (0.00,0.00)

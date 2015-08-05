@@ -1,0 +1,4 @@
+Two timers:
+1. 5 second - call update(), process events.
+2. 60 second - fetch radio source coordinate information.
+

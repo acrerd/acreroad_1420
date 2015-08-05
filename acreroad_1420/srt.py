@@ -23,13 +23,12 @@ class Mode:
     SIM = 1
 
 class SRT():   
-    def __init__(self,mode):
-        device = ""
+    def __init__(self,mode,device):
         baud = 9600
         if mode == Mode.SIM:
-            self.drive = Drive(device,baud,simulate=1)
+            self.drive = Drive(device,baud,simulate=1,calibration="000 000")
         elif mode == Mode.LIVE:
-            self.drive = Drive(device,baud,simulate=0)
+            self.drive = Drive(device,baud,simulate=0,calibration="000 000")
         self.pos = self.azalt()
         self.status = Status.INIT
         self.mode = mode
@@ -65,14 +64,20 @@ class SRT():
         ra,dec = status['ra'],status['dec']
         return (ra,dec)
 
-    def calibrate():
-        pass
+    def galactic(self):
+        """
+        """
+        return (0.00,0.00)
+
+    def calibrate(self):
+        offsets = self.drive.calibrate()
+        print(offsets)
 
     def slew(self,skymap,pos):
         """
         Slews to position pos in degrees.
         """
-        delay = 0.01
+        delay = 0.001
         self.status = Status.SLEWING
         if self.mode == Mode.SIM:
             #print("Slewing in sim mode.")
@@ -87,30 +92,30 @@ class SRT():
             if x < cx:
                 for i in reversed(range(x,cx)):
                     self.setCurrentPos((i,cy))
-                    skymap.setCurrentPos((i,cy))
-                    QtGui.QApplication.processEvents()
+                    #skymap.setCurrentPos((i,cy))
+                    #QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif x > cx:
                 for i in range(cx,x+1):
                     self.setCurrentPos((i,cy))
-                    skymap.setCurrentPos((i,cy))
-                    QtGui.QApplication.processEvents()
+                    #skymap.setCurrentPos((i,cy))
+                    #QtGui.QApplication.processEvents()
                     time.sleep(delay)
             if y < cy:
                 for i in reversed(range(y,cy)):
                     self.setCurrentPos((x,i))
-                    skymap.setCurrentPos((x,i))
-                    QtGui.QApplication.processEvents()
+                    #skymap.setCurrentPos((x,i))
+                    #QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif y > cy:
                 for i in range(cy,y+1):
                     self.setCurrentPos((x,i))
-                    skymap.setCurrentPos((x,i))
-                    QtGui.QApplication.processEvents()
+                    #skymap.setCurrentPos((x,i))
+                    #QtGui.QApplication.processEvents()
                     time.sleep(delay)
         else:
             # This is where live code goes
-            # remember self.getCurrentPos() is now in degrees in azalt or radec - NOT pixel coordinates.
+            # remember self.getCurrentPos() is now in degrees in azalt - NOT pixel coordinates.
             print("Slewing in live mode.")
             (x,y) = pos # target - mouse click position in degrees
             (cx,cy) = self.pos # current position in degrees.
@@ -119,14 +124,26 @@ class SRT():
             # construct a SkyCoord in correct coordinate frame.
             acreRoadAstropy = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
             now = Time(time.time(),format='unix')
-            altazframe = AltAz(x,y,obstime=now,location=acreRoadAstropy)
-            skycoord = SkyCoord(altazframe)        
-            self.drive.goto(skycoordazel)
-            skymap.setCurrentPos((az,el)) # for updating onscreen position as paintEvent() needs this value.
-            QtGui.QApplication.processEvents()
-        #print("Finished slewing to " + str(self.getCurrentPos()))
-        self.status = Status.READY
+            altazframe = AltAz(x*u.deg,y*u.deg,obstime=now,location=acreRoadAstropy)
+            skycoordazel = SkyCoord(altazframe)        
+            self.drive.goto(skycoordazel,track=False)
+
         
+    def slewSuccess(self,targetPos):
+        """
+        """
+        (tx,ty) = targetPos
+        (cx,cy) = self.pos
+        d = 1
+        #print("Target: %f %f" % (tx,ty))
+        #print("Current: %f %f" % (cx,cy))
+        #print(abs(tx-cx),abs(ty-cy))
+        if (abs(tx-cx) <= d) and (abs(ty-cy) <= d):
+            #print("Finished slewing to " + str(self.getCurrentPos()))
+            return True
+        else:
+            return False
+
     def stow(self,pos=(0,90)):
         pass
 
