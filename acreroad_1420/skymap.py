@@ -31,7 +31,7 @@ class Skymap(QtGui.QWidget):
         self.coordinateSystem = CoordinateSystem.AZEL # default coordinate system
         self.srt = self.parent().getSRT()
 
-        self.currentPos = (0,0) # this should always be in azel degrees
+        #self.currentPos = (0,0) # this should always be in azel degrees
         self.targetPos = (0,0) # likewise
 
         self.radioSources = [] # the list of radio source from radiosources.cat
@@ -41,7 +41,7 @@ class Skymap(QtGui.QWidget):
         """
         Required to set the initial pointing position, initial status and read in the contents of the source catalogue file.
         """
-        self.currentPos = self.srt.getCurrentPos()
+        #self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue(catalogue)
         self.srt.setStatus(Status.READY)
 
@@ -110,10 +110,10 @@ class Skymap(QtGui.QWidget):
             self.parent().updateStatusBar("Status: Tracking " + sourceName)
                             
     def setCurrentPos(self,pos):
-        self.currentPos = pos
+        self.srt.setCurrentPos(pos)
 
     def getCurrentPos(self):
-        return self.currentPos
+        return self.srt.getCurrentPos()
 
     def getCoordinateSystem(self):
         return self.coordinateSystem()
@@ -149,7 +149,7 @@ class Skymap(QtGui.QWidget):
         cursor = QtGui.QCursor()
         xf = self.mapFromGlobal(cursor.pos()).x()
         yf = self.mapFromGlobal(cursor.pos()).y()
-        (cxf,cyf) = self.currentPos
+        (cxf,cyf) = self.getCurrentPos()
 
         # in simulation mode, the coordinate are rounded to integers.
         if self.srt.getMode() == Mode.SIM:
@@ -198,7 +198,7 @@ class Skymap(QtGui.QWidget):
         Wrapper function for drawing the current aimed direction crosshair.
         """
         color = QtGui.QColor('black')
-        self.drawCrosshair(self.currentPos,color,qp)
+        self.drawCrosshair(self.getCurrentPos(),color,qp)
 
     def drawTargetPosCrosshair(self,qp):
         """

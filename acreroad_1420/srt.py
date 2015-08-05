@@ -37,7 +37,7 @@ class SRT():
         """
         Returns current position in azalt.
         """
-        return self.pos
+        return self.azalt()
         
     def setCurrentPos(self, pos):
         self.pos = pos

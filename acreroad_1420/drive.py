@@ -186,7 +186,7 @@ class Drive():
         """
         time = datetime.datetime.utcnow()
 
-        command_str = "T {} {} {} {} {} {}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
+        command_str = "T {} {} {} {} {} {:.4f}".format(time.year, time.month, time.day, time.hour, time.minute, time.second)
 
         return self._command(command_str)
 

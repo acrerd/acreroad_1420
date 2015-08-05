@@ -85,10 +85,10 @@ class antennaCoordsInfo(QtGui.QWidget):
         """
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
-        currentPos = self.parent().skymap.getCurrentPos()
+        currentPos = self.parent().srt.getCurrentPos()
         self.posLabel.setText("AzEl: " + "%.2f %.2f" % currentPos)
-        self.radecLabel.setText("RaDec: " + "%.2f %.2f" % radec(currentPos))
-        self.galLabel.setText("Gal: " + "%.2f %.2f" % galactic(currentPos))
+        #self.radecLabel.setText("RaDec: " + "%.2f %.2f" % radec(currentPos))
+        #self.galLabel.setText("Gal: " + "%.2f %.2f" % galactic(currentPos))
 
     def tick(self):
         self.utcLabel.setText("UTC: " + time.strftime("%d %b %y %H:%M:%S",time.gmtime()))
@@ -200,7 +200,7 @@ class commandButtons(QtGui.QWidget):
     def handleHomeButton(self):
         """
         """
-        pass
+        self.parent().srt.drive.home()
 
     def handleSlewButton(self):
         """
