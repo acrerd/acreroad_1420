@@ -38,7 +38,7 @@ class SRT():
         """
         Returns current position in azalt.
         """
-        return self.azalt()
+        return self.pos
         
     def setCurrentPos(self, pos):
         self.pos = pos
@@ -73,56 +73,68 @@ class SRT():
 
 
     def stow(self):
+        """
+        A wrapper function for Drive.stow().
+        """
         self.setStatus(Status.SLEWING)
-        self.drive.stow()
+        if self.mode == Mode.SIM:
+            self.slew((0,90))
+        elif self.mode == Mode.LIVE:
+            self.drive.stow()
 
     def home(self):
+        """
+        A wrapper function for Drive.home().
+        """
         self.setStatus(Status.SLEWING)
-        self.drive.home()
+        if self.mode == Mode.SIM:
+            self.slew((90,0))
+        elif self.mode== Mode.LIVE:
+            self.drive.home()
 
     def calibrate(self):
-        self.setStatus(Status.CALIBRATING)
-        self.drive.calibrate()
+        """
+        A wrapper function for Drive.calibrate().
+        """
+        if self.mode == Mode.SIM:
+            print("Calibration only works in live mode.")
+        elif self.mode == Mode.LIVE:
+            self.setStatus(Status.CALIBRATING)
+            self.drive.calibrate()
 
-    def slew(self,skymap,pos):
+    def slew(self,pos):
         """
         Slews to position pos in degrees.
         """
-        delay = 0.001
+        delay = 0.05
         self.status = Status.SLEWING
         if self.mode == Mode.SIM:
-            #print("Slewing in sim mode.")
+            print("Slewing in sim mode.")
             (xf,yf) = pos # target position in degrees
             x = int(xf)
             y = int(yf)
             (cxf,cyf) = self.pos # current position in degrees
             cx = int(cxf)
             cy = int(cyf)
-            #print("Target Pos: (" + str(x) + "," + str(y) + ")")
-            #print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             if x < cx:
                 for i in reversed(range(x,cx)):
                     self.setCurrentPos((i,cy))
-                    #skymap.setCurrentPos((i,cy))
-                    #QtGui.QApplication.processEvents()
+                    QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif x > cx:
                 for i in range(cx,x+1):
                     self.setCurrentPos((i,cy))
-                    #skymap.setCurrentPos((i,cy))
-                    #QtGui.QApplication.processEvents()
+                    QtGui.QApplication.processEvents()
                     time.sleep(delay)
             if y < cy:
                 for i in reversed(range(y,cy)):
                     self.setCurrentPos((x,i))
-                    #skymap.setCurrentPos((x,i))
-                    #QtGui.QApplication.processEvents()
+                    QtGui.QApplication.processEvents()
                     time.sleep(delay)
             elif y > cy:
                 for i in range(cy,y+1):
                     self.setCurrentPos((x,i))
-                    #skymap.setCurrentPos((x,i))
-                    #QtGui.QApplication.processEvents()
+                    QtGui.QApplication.processEvents()
                     time.sleep(delay)
         else:
             # This is where live code goes
@@ -133,7 +145,8 @@ class SRT():
             print("Target Pos: (" + str(x) + "," + str(y) + ")")
             print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             # construct a SkyCoord in correct coordinate frame.
-            acreRoadAstropy = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+            # TODO: fix this -- drive.location
+            acreRoadAstropy = self.location
             now = Time(time.time(),format='unix')
             altazframe = AltAz(x*u.deg,y*u.deg,obstime=now,location=acreRoadAstropy)
             skycoordazel = SkyCoord(altazframe)        
@@ -161,14 +174,14 @@ class SRT():
     def setStatus(self,status):
         self.status = status
 
-    def track(self,skymap,src):
+    def track(self,src):
         """
         The SRT will follow the source as it move across the sky.
         """
         if self.mode == Mode.SIM:
             #print("Tracking " + src.getName())
             pos = src.getPos()
-            self.slew(skymap,pos)
+            self.slew(pos)
             self.status = Status.TRACKING
         else:
             # this is where the live code goes.

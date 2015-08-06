@@ -209,8 +209,9 @@ class commandButtons(QtGui.QWidget):
         """
         Returns the SRT to its home position.
         """
-        homeOffset = self.getOffset()
-        self.parent().skymap.setTargetPos(homeOffset)
+        #homeOffset = self.getOffset().split()
+        #self.parent().skymap.setTargetPos((float(homeOffset[0]),float(homeOffset[1])))
+        self.parent().skymap.setTargetPos((90,0))
         self.parent().srt.home()
 
     def handleSlewButton(self):
@@ -261,10 +262,9 @@ class commandButtons(QtGui.QWidget):
                     else:
                         print("Slewing to " + str(targetPos))
                         self.parent().srt.setStatus(Status.SLEWING)
-                        #self.parent().updateStatusBar()
-                        self.parent().srt.slew(self,targetPos)
-                        #self.currentPos = targetPos
-                        self.parent().skymap.setCurrentPos(targetPos)
+                        self.parent().skymap.setTargetPos(targetPos)
+                        self.parent().srt.slew(targetPos)
+                        #self.parent().skymap.setCurrentPos(targetPos)
                         #self.parent().updateStatusBar()
                 else:
                     print("Already Slewing.  Please wait until finished.")

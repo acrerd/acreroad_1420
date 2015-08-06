@@ -62,12 +62,14 @@ class Skymap(QtGui.QWidget):
             src.update()
 
     def updateSkymap(self):
+        """
+        """
         targetPos = self.targetPos
-        if self.srt.getMode() == Mode.SIM:
-            self.setCurrentPos(self.srt.getCurrentPos())
-        elif self.srt.getMode() == Mode.LIVE:
-            self.setCurrentPos(self.srt.azalt())
-            
+        #if self.srt.getMode() == Mode.SIM:
+        #    self.setCurrentPos(self.srt.getCurrentPos())
+        #elif self.srt.getMode() == Mode.LIVE:
+        #    self.setCurrentPos(self.srt.azalt())
+
         if self.srt.getStatus() == Status.CALIBRATING:
             if self.srt.drive.calibrating == False:
                 self.srt.setStatus(Status.READY)
@@ -168,18 +170,19 @@ class Skymap(QtGui.QWidget):
             y = self.pixelToDegreeY(yf)
             currentPos = (cxf,cyf)
 
-        #print(x,y)
-        self.clickedSource = self.checkClickedSource((x,y),4)
-        #print(self.clickedSource)
-        if self.clickedSource != 0:
-            #print(self.clickedSource.getName())
-            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
-            self.targetPos = self.clickedSource.getPos()
-        else:
-            self.targetPos = (x,y)
-
         state = self.srt.getStatus()
         slewToggle = self.parent().commandButtons.getSlewToggle()
+
+
+        self.clickedSource = self.checkClickedSource((x,y),4)
+        if self.clickedSource != 0:
+            self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
+            if slewToggle == SlewToggle.ON and state != Status.SLEWING:
+                self.targetPos = self.clickedSource.getPos()
+        else:
+            if slewToggle == SlewToggle.ON and state != Status.SLEWING:
+                self.targetPos = (x,y)
+
         if slewToggle == SlewToggle.ON:
             if state != Status.SLEWING:
                 #self.targetPos = targetPos
@@ -191,13 +194,14 @@ class Skymap(QtGui.QWidget):
                     print("Slewing to " + str(self.targetPos))
                     self.srt.setStatus(Status.SLEWING)
                     self.updateStatusBar()
-                    self.srt.slew(self,self.targetPos)
+                    self.srt.slew(self.targetPos)
                     #self.currentPos = targetPos
                     self.updateStatusBar()
             else:
                 print("Already Slewing.  Please wait until finished.")
         else:
             pass
+
         self.update()
     
     def drawCurrentPosCrosshair(self,qp):

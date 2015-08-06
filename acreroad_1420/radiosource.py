@@ -12,7 +12,7 @@ class RadioSource():
     def __init__(self,name):
         self.pos = (0,0) # (az,alt)
         self.name = name
-        self.acreRoadAstropy = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+        self.acreRoadAstropy = EarthLocation(lat=55.9024278*u.deg,lon=-4.307582*u.deg,height=61*u.m)
         self.exists = False
         
         self.acreRoadPyEphem = ephem.Observer()
