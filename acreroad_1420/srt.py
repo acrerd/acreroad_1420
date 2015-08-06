@@ -23,13 +23,14 @@ class Mode:
     SIM = 1
 
 class SRT():   
-    def __init__(self,mode,device):
+    def __init__(self,mode,device,calibrationSpeeds):
         baud = 9600
         if mode == Mode.SIM:
-            self.drive = Drive(device,baud,simulate=1,calibration="000 000")
+            self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
-            self.drive = Drive(device,baud,simulate=0,calibration="000 000")
+            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds)
         self.pos = self.azalt()
+        self.location = self.drive.location  #TODO - use this
         self.status = Status.INIT
         self.mode = mode
 
@@ -70,9 +71,18 @@ class SRT():
         """
         return (0.00,0.00)
 
+
+    def stow(self):
+        self.setStatus(Status.SLEWING)
+        self.drive.stow()
+
+    def home(self):
+        self.setStatus(Status.SLEWING)
+        self.drive.home()
+
     def calibrate(self):
-        offsets = self.drive.calibrate()
-        print(offsets)
+        self.setStatus(Status.CALIBRATING)
+        self.drive.calibrate()
 
     def slew(self,skymap,pos):
         """
@@ -144,9 +154,6 @@ class SRT():
             return True
         else:
             return False
-
-    def stow(self,pos=(0,90)):
-        pass
 
     def getStatus(self):
         return self.status

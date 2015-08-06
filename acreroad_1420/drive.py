@@ -24,7 +24,8 @@ simulate : bool
 
 """
 
-import re, datetime
+import re, datetime, time
+import ConfigParser
 import numpy as np
 import astropy
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
@@ -46,6 +47,14 @@ class Drive():
     az = 0
     alt = 0
 
+    # Calibration variables
+
+    az_home = 90.0
+    el_home = -8.5
+
+    # Operational flags
+    calibrating = False
+
     # String formats
 
     com_format = re.compile("[A-Za-z]{1,2} ?([-+]?[0-9]{0,4}\.[0-9]{0,8} ?){0,6}") # general command string format
@@ -53,7 +62,7 @@ class Drive():
     
     stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
     
-    def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=acre_road):
+    def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=None):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -87,15 +96,29 @@ class Drive():
         >>> connection = drive.Drive('/dev/tty.usbserial', 9600, simulate=1)
         
         """
+        config = ConfigParser.SafeConfigParser()
+        config.read('settings.cfg')
+
+        homealtaz = config.get('offsets', 'home').split()
+        self.az_home, self.el_home = float(homealtaz[0]), float(homealtaz[1])
+
+        if not location:
+            observatory = config.get('observatory', 'location').split()
+            location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
+
+
         self.sim = simulate
         self.timeout = timeout
         self.location = location
         # Initialise the connection
         if not self.sim: self._openconnection(device, baud)
+
+        # Give the Arduino a chance to power-up
+        time.sleep(1)
         
         self.calibrate(calibration)
+        self.set_status_cadence(200)
         self.home()
-
 
         self.setTime()
         
@@ -139,30 +162,78 @@ class Drive():
         while True:
             line = self.ser.readline()
             self.parse(line)
-            #print line
             
     def parse(self, string):
         # A specific output from a function
         if string[0]==">":
-            if [1]=="S": # This is a status string of keyval pairs
+            if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
-                self.az, self.alt = d['Taz'], d['Talt']
+                if d['Taz'] < 0: d['Taz'] = np.pi - d['Taz']
+
+                self.az, self.alt = d['Taz']%(2*np.pi), d['Talt']%(0.5*np.pi)                
                 return d
+            if string[1]=='c': # This is the return from a calibration run
+                self.calibrating=False
+                print string
         # A status string
         elif string[0]=="s":
             # Status strings are comma separated
+            print string
             d = string[2:].split(",")
-            self.az, self.alt = float(d[3])*(180/np.pi), float(d[4])*(180/np.pi)
+            try:
+                if self._parse_floats(d[3]) < 0 : d[3] = str(np.pi - self._parse_floats(d[3]))
+                self.az, self.alt = self._parse_floats(d[3])*(180/np.pi), self._parse_floats(d[4])*(180/np.pi)
+            except IndexError:
+                # Sometimes (early on?) the drive appears to produce
+                # an incomplete status string. These need to be
+                # ignored otherwise the parser crashes the listener
+                # process.
+                pass
+            #print self._parse_floats(d[3])%360
             return d
         elif string[0]=="!":
             # This is an error string
             print string[1:]
         elif string[0]=="#":
             # This is a comment string
+            print string
             pass
                 
+    def _parse_floats(self, string):
+        """Parses the float outputs from the controller in a robust way which
+        allows for the exponent to be a floating-point numberm, which
+        is not supported by Python.
+
+        Parameters
+        ----------
+        string : str
+           A string containing the float which needs to be cast.
+
+        Returns
+        -------
+        float
+           A float which is in the correct format for Python.
+        """
+        parts = string.split('e')
+        if len(parts)==2:
+            return float(parts[0]) * 10**float(parts[1])
+        else:
+            return float(parts[0])
+
+    def panic(self):
+        """
+        Stops the telescope drives.
+        """
+        return self._command("x")
             
+    def set_status_cadence(self, interval):
+        """
+        Sets the cadence of the status messages from the controller.
+        """
+        return self._command("s {}".format(int(interval)))
+
     def calibrate(self, values=None):
+
         """
         Carries-out a calibration run, returning two numbers which are offsets, or sets the calibration if known values are provided.
 
@@ -179,6 +250,7 @@ class Drive():
             if self.cal_format.match(values):
                 return self._command("c "+values)
         else:
+            self.calibrating=True
             return self._command("c")
         pass
 
@@ -193,23 +265,32 @@ class Drive():
 
         return self._command(command_str)
 
-    def setLocation(self, location=None, dlat=0, dlon=0, azimuth=90, altitude=-6):
+    def setLocation(self, location=None, dlat=0, dlon=0, azimuth=90.0, altitude=3.0):
         """
         Sets the location of the telescope.
 
         Parameters
         ----------
         location : astropy.coordinates.EarthLocation object
+           The observatory location
+        azimuth : float
+           The azimuth location in radians of the home position
+        altitude : float
+           The altitude location in radians of the home position
         """
         if not location:
             # Assume we're at Acre Road, in Glasgow
             location = self.acre_road
 
-        latitude  = location.latitude.value
-        longitude = location.longitude.value    
+        latitude  = location.latitude.value * (180/np.pi)
+        longitude = location.longitude.value * (180/np.pi)
+
+        azimuth = azimuth*(np.pi/180)
+        altitude = altitude*(np.pi/180)
 
         # Construct the command
         command_str = "O {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
+        
         return self._command(command_str)
 
     def goto(self, skycoord, track=True):
@@ -272,6 +353,15 @@ class Drive():
         """
         command_str = "gH"
         return self._command(command_str)
+
+    def stow(self):
+        """
+        Slews the telescope to the stowing position (pointed at the zenith)
+        """
+        zenith = 90*(np.pi/180)
+        command_str = "gh 2.0 "+str(zenith)
+        return self._command(command_str)
+
 
     def status(self):
         """

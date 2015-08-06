@@ -66,10 +66,11 @@ class Skymap(QtGui.QWidget):
         if self.srt.getMode() == Mode.SIM:
             self.setCurrentPos(self.srt.getCurrentPos())
         elif self.srt.getMode() == Mode.LIVE:
-            #print(self.srt.azalt())
             self.setCurrentPos(self.srt.azalt())
             
-        print(self.getCurrentPos())
+        if self.srt.getStatus() == Status.CALIBRATING:
+            if self.srt.drive.calibrating == False:
+                self.srt.setStatus(Status.READY)
 
         # potential problem here if the telescope never reaches its destination then the status will never be ready and a hard reset is required.
         if self.srt.getStatus() == Status.SLEWING:
@@ -114,6 +115,12 @@ class Skymap(QtGui.QWidget):
 
     def getCurrentPos(self):
         return self.srt.getCurrentPos()
+
+    def setTargetPos(self,pos):
+        self.targetPos = pos
+
+    def getTargetPos(self):
+        return self.targetPos
 
     def getCoordinateSystem(self):
         return self.coordinateSystem()

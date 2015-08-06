@@ -190,17 +190,28 @@ class commandButtons(QtGui.QWidget):
         self.trackTimer.timeout.connect(self.handleTrackButton)
         self.trackTimer.setInterval(5000)
 
+        self.offset = (0,0) #azel
+
+    def setOffset(self,offset):
+        self.offset = offset
+
+    def getOffset(self):
+        return self.offset
 
     def handleStowButton(self):
         """
         Returns the SRT to its stow position.
         """
-        pass
+        self.parent().skymap.setTargetPos((0,90))
+        self.parent().srt.stow()
 
     def handleHomeButton(self):
         """
+        Returns the SRT to its home position.
         """
-        self.parent().srt.drive.home()
+        homeOffset = self.getOffset()
+        self.parent().skymap.setTargetPos(homeOffset)
+        self.parent().srt.home()
 
     def handleSlewButton(self):
         """
@@ -273,7 +284,6 @@ class commandButtons(QtGui.QWidget):
 
     def handleCalibrateButton(self):
         self.parent().srt.calibrate()
-        #print("Not implemented yet ...")
 
     def getSlewToggle(self):
         return self.slewToggle
@@ -281,6 +291,11 @@ class commandButtons(QtGui.QWidget):
     def setSlewToggle(self,st):
         self.slewToggle = st
 
+def readConfigFile():
+    pass
+
+def writeConfigFile():
+    pass
         
 
 def run():
@@ -303,9 +318,14 @@ def run():
     config.read('settings.cfg')
     device = config.get('arduino','dev')
     catalogue = config.get('catalogue','catfile')
+    calibrationSpeeds = config.get('calibration','speeds')
+    homeOffset = config.get('offsets','home')
+    #calibrationSpeeds = (cs.split()[0],cs.split()[1])
+    #print(calibrationSpeeds.split()[0],calibrationSpeeds.split()[1])
 
-    srt = SRT(mode,device)
+    srt = SRT(mode,device,calibrationSpeeds)
     main = mainWindow(srt,catalogue)
+    main.commandButtons.setOffset(homeOffset)
 
     main.show()
     sys.exit(app.exec_())
