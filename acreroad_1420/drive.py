@@ -178,11 +178,12 @@ class Drive():
         # A status string
         elif string[0]=="s":
             # Status strings are comma separated
-            print string
+            #print string
             d = string[2:].split(",")
             try:
+                # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
                 if self._parse_floats(d[3]) < 0 : d[3] = str(np.pi - self._parse_floats(d[3]))
-                self.az, self.alt = self._parse_floats(d[3])*(180/np.pi), self._parse_floats(d[4])*(180/np.pi)
+                #self.az, self.alt = self._parse_floats(d[3])*(180/np.pi), self._parse_floats(d[4])*(180/np.pi)
             except IndexError:
                 # Sometimes (early on?) the drive appears to produce
                 # an incomplete status string. These need to be
@@ -191,14 +192,41 @@ class Drive():
                 pass
             #print self._parse_floats(d[3])%360
             return d
+        elif string[0]=="a":
+            if string[1]=="z" or string[1]=="l":
+                # This is an azimuth or an altitude click, update the position
+                d = string.split(",")
+                #self.az, self.alt = self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3]))
         elif string[0]=="!":
             # This is an error string
             print string[1:]
         elif string[0]=="#":
             # This is a comment string
-            print string
+            if string[1:18] == "FollowingSchedule":
+                # This is a scheduler comment
+                d = string.split()
+                if not d[1][0] == "o":
+                    # This is a pseudo-status string
+                    self.az, self.alt = self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3]))
             pass
-                
+        #else: print string
+
+    def _r2d(self, radians):
+        """
+        Converts radians to degrees.
+        """
+        degrees = radians*(180/np.pi)
+        if degrees < 0 : degrees += 360
+        return degrees%360
+        
+    def _d2r(self, degrees):
+        """
+        Converts degrees to radians.
+        """
+        radians =  degrees*(np.pi/180)
+        if radians < 0 : radians += (2*np.pi)
+        return radians%(2*np.pi)
+
     def _parse_floats(self, string):
         """Parses the float outputs from the controller in a robust way which
         allows for the exponent to be a floating-point numberm, which

@@ -1,3 +1,9 @@
+"""
+Skymap draws the axes, radio source positions, current and target position crosshairs.
+Author: Ronnie Frith
+Contact: frith.ronnie@gmail.com
+"""
+
 import random,math,time
 from PyQt4 import QtGui, QtCore
 from srt import CoordinateSystem,Status,Mode
@@ -69,6 +75,9 @@ class Skymap(QtGui.QWidget):
         #    self.setCurrentPos(self.srt.getCurrentPos())
         #elif self.srt.getMode() == Mode.LIVE:
         #    self.setCurrentPos(self.srt.azalt())
+
+        if self.srt.getMode() == Mode.LIVE:
+            self.setCurrentPos(self.srt.azalt())
 
         if self.srt.getStatus() == Status.CALIBRATING:
             if self.srt.drive.calibrating == False:

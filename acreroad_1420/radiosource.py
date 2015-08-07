@@ -1,3 +1,9 @@
+"""
+Container class for a radio source.
+Author: Ronnie Frith
+Contact: frith.ronnie@gmail.com
+"""
+
 import astropy, math
 from astropy.time import Time
 from astropy import units as u
@@ -103,7 +109,7 @@ def radec(azel):
     """
     (az,el) = azel
     now = Time(time.time(),format='unix')
-    acreRoad = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=45*u.m)
+    acreRoad = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=61*u.m) # change this
     azelframe = AltAz(az*u.deg,el*u.deg,obstime=now,location=acreRoad)
     source = SkyCoord(azelframe)
     radecframe = ICRS()

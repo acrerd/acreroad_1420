@@ -1,3 +1,9 @@
+"""
+Control class for the SRT.  Provides wrapper methods for calling the Drive class methods and keeps track of the current position of the SRT.
+Author: Ronnie Frith
+Contact: frith.ronnie@gmail.com
+"""
+
 import time, astropy
 from astropy.time import Time
 from astropy import units as u
@@ -158,7 +164,7 @@ class SRT():
         """
         (tx,ty) = targetPos
         (cx,cy) = self.pos
-        d = 1
+        d = 3
         #print("Target: %f %f" % (tx,ty))
         #print("Current: %f %f" % (cx,cy))
         #print(abs(tx-cx),abs(ty-cy))

@@ -1,3 +1,9 @@
+"""
+Main entry for SRT drive control.
+Author: Ronnie Frith
+Contact: frith.ronnie@gmail.com
+"""
+
 import sys, argparse, ConfigParser, time
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
@@ -325,7 +331,7 @@ def run():
 
     srt = SRT(mode,device,calibrationSpeeds)
     main = mainWindow(srt,catalogue)
-    main.commandButtons.setOffset(homeOffset)
+    main.commandButtons.setOffset(homeOffset) # this is not the way to do this.
 
     main.show()
     sys.exit(app.exec_())
