@@ -54,6 +54,8 @@ class Drive():
 
     # Operational flags
     calibrating = False
+    homing = False
+    ready = False
 
     # String formats
 
@@ -226,6 +228,19 @@ class Drive():
             pass
         #else: print string
 
+    def slewSuccess(self,targetPos):
+        """
+        """
+        (cx,cy) = self.status()['az'], self.status()['alt']
+        realPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
+        d = 3
+        
+        if targetPos.separation(realPos).value <= d:
+            #print("Finished slewing to " + str(self.getCurrentPos()))
+            return True
+        else:
+            return False
+            
     def _r2d(self, radians):
         """
         Converts radians to degrees.
@@ -354,37 +369,23 @@ class Drive():
         # To do : We need to make sure that this behaves nicely with a
         # list of coordinates as well as single ones.
 
-        # We need to make sure that we send RA and DEC values to the
-        # controller (it is theoretically possible to do ALTAZ too,
-        # but let's start simple, eh?')
-
-        #skycoord = skycoord.transform_to(frame=ICRS)
-
         time = Time.now()
-        
-        #ra  = skycoord.ra
-        #dec = skycoord.dec
 
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
         self.status()
         # construct a command string
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
-        print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
-            pass
-            # We need to do more here than just check the command has
-            # passed successfully; we need to check the telescope is
-            # (or thinks it is) pointing where we asked.
-            #if self.sim:
-                #self.ra  = ra
-                #self.dec = dec
-            
-            # If the command completes then set the controller to track the object
-            #if track:    
-            #    command_str = "ts"
-            #    return self._command(command_str)
-            #else: return 1
+            if track:
+                command_str = "q"
+                self._command(command_str)
+                command_str = "ts"
+                self._command(command_str)
+            while not self.slewSuccess(skycoord):
+                self.slewing = True
+            else:
+                self.slewing = False
         else:
             raise ControllerException("The telescope has failed to slew to the requested location")
 
@@ -394,6 +395,7 @@ class Drive():
 
         
         """
+        self.homing = True
         command_str = "gH"
         return self._command(command_str)
 
