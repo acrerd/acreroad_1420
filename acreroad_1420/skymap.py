@@ -7,7 +7,7 @@ Contact: frith.ronnie@gmail.com
 import random,math,time
 from PyQt4 import QtGui, QtCore
 from srt import CoordinateSystem,Status,Mode
-from radiosource import RadioSource
+from radiosource import RadioSource, GalacticPlane
 
 from astropy.time import Time
 from astropy import units as u
@@ -22,9 +22,10 @@ class Skymap(QtGui.QWidget):
     """
     The skymap is a widget which plots axes and draws radio sources read in by the catalogue file.
     """
-    def __init__(self,parent=None):
+    def __init__(self,parent=None, time=None, location=None):
         QtGui.QWidget.__init__(self,parent=parent)
-        x,y,w,h = (0,400,600,300) #probably should be passed as argument in constructor
+        screen = QtGui.QDesktopWidget().screenGeometry()         
+        x,y,w,h = (0,70,screen.width()-300,screen.height()-115) #probably should be passed as argument in constructor
         self.sceneSize = (x,y,w,h)
         self.scene = QtGui.QGraphicsScene(self)
         self.setGeometry(QtCore.QRect(x,y,w,h))
@@ -34,6 +35,9 @@ class Skymap(QtGui.QWidget):
         p.setColor(self.backgroundRole(), QtGui.QColor("white"))
         self.setPalette(p)
 
+        self.time = time
+        self.location = location
+        
         self.coordinateSystem = CoordinateSystem.AZEL # default coordinate system
         self.srt = self.parent().getSRT()
 
@@ -41,6 +45,7 @@ class Skymap(QtGui.QWidget):
         self.targetPos = (0,0) # likewise
 
         self.radioSources = [] # the list of radio source from radiosources.cat
+        self.galaxy = GalacticPlane(time = self.time, location=self.location)
         self.clickedSource = ""  # name of last clicked source
 
     def init(self,catalogue):
@@ -58,6 +63,7 @@ class Skymap(QtGui.QWidget):
         self.drawLines(qp)
         self.drawCurrentPosCrosshair(qp)
         self.drawTargetPosCrosshair(qp)
+        self.drawGalaxy(qp)
         qp.end()
 
     def fetchRadioSourceCoordinates(self):
@@ -66,6 +72,7 @@ class Skymap(QtGui.QWidget):
         """
         for src in self.radioSources:
             src.update()
+        self.galaxy.update()
 
     def updateSkymap(self):
         """
@@ -239,7 +246,7 @@ class Skymap(QtGui.QWidget):
         """
         x,y = self.degreeToPixel(pos)
         d = 5
-        crosshairPen = QtGui.QPen(color,1,QtCore.Qt.SolidLine)
+        crosshairPen = QtGui.QPen(color,3,QtCore.Qt.SolidLine)
         qp.setPen(crosshairPen)
         qp.drawLine(x-d,y,x+d,y)
         qp.drawLine(x,y-d,x,y+d)
@@ -326,29 +333,16 @@ class Skymap(QtGui.QWidget):
                 #print(name + " is not visible currently.")
                 pass
         
-    def drawPoints(self,qp,n):
-        """
-        A function for drawing n points randomly distributed on the skymap.
-        """
-        x,y,w,h = self.sceneSize
-        d = 3
-        pointsPen = QtGui.QPen(QtCore.Qt.red,6,QtCore.Qt.DashLine)
-        qp.setPen(pointsPen)
-
-        for i in range(n):
-            x = random.randint(20, w-20)
-            y = random.randint(20, h-20)
-            qp.drawEllipse(x,y,d,d)
-        
     def drawLines(self,qp):
         """
         Draw the axes lines.
         """
         x,y,w,h = self.sceneSize
         
-        linesPen = QtGui.QPen(QtCore.Qt.blue,1,QtCore.Qt.DashLine)
+        linesPen = QtGui.QPen(QtGui.QColor(0,0,10, 30),1)
         qp.setFont(QtGui.QFont('Decorative', 8))
         qp.setPen(linesPen)
+        qp.setRenderHint(qp.Antialiasing)
 
         if self.coordinateSystem == CoordinateSystem.RADEC:
             # Right Ascension
@@ -375,9 +369,26 @@ class Skymap(QtGui.QWidget):
             for i in reversed(range(1,nlines+1)):
                 j = self.degreeToPixelY(i * (90.0/nlines))
                 qp.drawLine(1,j,w-1,j)
-                qp.drawText(w-20,j-5,str(i*10))
+                qp.drawText(w-20,j-10,str(i*10))
 
+    def drawGalaxy(self, qp):
+        """
+        Draw in the galactic plane.
+        """
+        linesPen = QtGui.QPen(QtGui.QColor(255, 100, 0, 255),3)
+        qp.setFont(QtGui.QFont('Decorative', 8))
+        qp.setPen(linesPen)
 
+        c = self.galaxy.points
+        pix = []
+        for point in c:
+            pix.append(self.degreeToPixel(point))
+            
+        for i in xrange(len(pix)-1):
+            j = i + 1
+            if pix[i][0]<pix[j][0]: continue # avoids drawing a line across the screen when the plane crosses the wrap-over.
+            qp.drawLine(pix[i][0], pix[i][1], pix[j][0], pix[j][1])
+                
     def degreeToPixelX(self,deg):
         (xs,ys,w,h) = self.sceneSize
         return deg * (w/360.0)
