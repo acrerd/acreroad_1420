@@ -49,7 +49,7 @@ class Skymap(QtGui.QWidget):
         """
         #self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue(catalogue)
-        self.srt.setStatus(Status.READY)
+        #self.srt.setStatus(Status.READY)
 
     def paintEvent(self, event):
         qp = QtGui.QPainter()
@@ -70,11 +70,17 @@ class Skymap(QtGui.QWidget):
     def updateSkymap(self):
         """
         """
-        targetPos = self.targetPos
+        targetPos = self.getTargetPos()
         #if self.srt.getMode() == Mode.SIM:
         #    self.setCurrentPos(self.srt.getCurrentPos())
         #elif self.srt.getMode() == Mode.LIVE:
         #    self.setCurrentPos(self.srt.azalt())
+
+        if self.srt.getStatus() == Status.INIT:
+            self.setTargetPos((90,0))
+            targetPos = self.getTargetPos()
+            if self.srt.slewSuccess(targetPos) == True:
+                self.srt.setStatus(Status.READY)
 
         if self.srt.getMode() == Mode.LIVE:
             self.setCurrentPos(self.srt.azalt())
@@ -96,7 +102,7 @@ class Skymap(QtGui.QWidget):
 
         if self.srt.getStatus() == Status.TRACKING:
             source = self.getClickedSource() 
-            self.srt.track(self,source)
+            self.srt.track(source)
 
         self.updateStatusBar()
         self.update()
