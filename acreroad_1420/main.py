@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """
 Main entry for SRT drive control.
 Author: Ronnie Frith
@@ -25,11 +28,13 @@ class mainWindow(QtGui.QMainWindow):
     """
     def __init__(self, srt, catalogue, parent=None):
         super(mainWindow,self).__init__(parent=parent)
-        self.setGeometry(50,50,600,800)
+        screen = QtGui.QDesktopWidget().screenGeometry()        
+        #self.showMaximized()
+        self.setGeometry(50,50,screen.width(),screen.height())
         self.setWindowTitle("SRT Drive Control")
         self.setFocus()
         self.srt = srt
-        self.skymap = Skymap(self)
+        self.skymap = Skymap(self, time=srt.drive.current_time, location=srt.drive.location)
         self.skymap.init(catalogue) # this must be called to get the current position of srt to diplay it on the skymap.
 
         self.commandButtons = commandButtons(self)
@@ -66,38 +71,47 @@ class antennaCoordsInfo(QtGui.QWidget):
     """
     def __init__(self,parent):
         super(antennaCoordsInfo,self).__init__(parent)
-        self.setGeometry(250,0,200,250)
+        screen = QtGui.QDesktopWidget().screenGeometry()         
+        self.setGeometry(0,-8,screen.width(),38)
         gb = QtGui.QGroupBox(self)
-        gb.setTitle("Antenna Coordinates")
-        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")        
-        gb.setFixedSize(200,250)
-        layout = QtGui.QVBoxLayout(self)
-
-        self.posLabel = QtGui.QLabel("AzEl: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
+        #gb.setTitle("Antenna Coordinates")
+        gb.setStyleSheet("QGroupBox {background: black; color: #ffffff; margin-top: 0.5em; margin-bottom: 0.5em;}")        
+        gb.setFixedSize(screen.width(),200)
+        layout = QtGui.QHBoxLayout(self)
+        #self.setLayout(layout)
+        position = self.parent().getSRT().skycoord()
+        
+        self.posLabel = QtGui.QLabel(" <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>Az</span>: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
         layout.addWidget(self.posLabel)
 
-        self.radecLabel = QtGui.QLabel("Ra Dec: todo ")
+        self.radecLabel = QtGui.QLabel("Ra Dec: {0.ra:.2f} {0.dec:.2f}".format( position.transform_to('icrs')  ))
         layout.addWidget(self.radecLabel)
         
-        self.galLabel = QtGui.QLabel("Gal: todo")
+        self.galLabel = QtGui.QLabel("Gal: {0.l:.2f} {0.b:.2f}".format(position.transform_to('galactic')))
         layout.addWidget(self.galLabel)
 
         self.utcLabel = QtGui.QLabel("UTC: todo")
         layout.addWidget(self.utcLabel)
 
-        gb.setLayout(layout)
+        #self.sidLabel = QtGui.QLabel("Sidereal: todo")
+        #layout.addWidget(self.sidLabel)
+
+        vbox = QtGui.QVBoxLayout()
+        #vbox.addStretch(1)
+        vbox.addLayout(layout)
 
     def updateCoords(self):
         """
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
-        currentPos = self.parent().srt.getCurrentPos()
-        self.posLabel.setText("AzEl: " + "%.2f %.2f" % currentPos)
-        #self.radecLabel.setText("RaDec: " + "%.2f %.2f" % radec(currentPos))
-        #self.galLabel.setText("Gal: " + "%.2f %.2f" % galactic(currentPos))
+        currentPos = self.parent().getSRT().skycoord()
+        self.posLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.az.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>az</span> <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.alt.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>alt</span>".format(currentPos))
+        self.radecLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.ra.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>ra</span> <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.dec.value:.2f}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>dec</span>" .format(currentPos.transform_to('icrs')))
+        self.galLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.l.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lat</span> <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.b.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lon</span>".format(currentPos.transform_to('galactic')))
 
     def tick(self):
-        self.utcLabel.setText("UTC: " + time.strftime("%d %b %y %H:%M:%S",time.gmtime()))
+        self.utcLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>UTC</span>".format(time.strftime("%H:%M:%S",time.gmtime())))
+        #self.sidLabel.setText("Sidereal: {0.sidereal_time()}".format(self.parent().getSRT().drive.current_time_local))
 
 class sourceInfo(QtGui.QWidget):
     """
@@ -105,14 +119,15 @@ class sourceInfo(QtGui.QWidget):
     """
     def __init__(self,parent):
         super(sourceInfo,self).__init__(parent)
-        self.setGeometry(0,275,600,100)
+        screen = QtGui.QDesktopWidget().screenGeometry()         
+        self.setGeometry(screen.width()-290,275,260,200)
         gb = QtGui.QGroupBox(self)
-        gb.setTitle("Source Information")
-        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
+        #gb.setTitle("Source Information")
+        gb.setStyleSheet("QGroupBox {background: #dddddd; margin: 0.5em; } *[class=objectName]{font-size: 24pt;}")
         gb.setFixedSize(600,100)
         layout = QtGui.QVBoxLayout(self)
 
-        self.nameLabel = QtGui.QLabel("Name: ")
+        self.nameLabel = QtGui.QLabel("")
         layout.addWidget(self.nameLabel)
 
         self.posLabel = QtGui.QLabel("AzEl: ")
@@ -132,12 +147,18 @@ class sourceInfo(QtGui.QWidget):
         """
         name = src.getName()
         pos = src.getPos()
+        skycoord = src.skycoord
         #radec = src.getRADEC()
         #gal = src.getGal()
-        self.nameLabel.setText("Name: " + name)
-        self.posLabel.setText("AzEl: " + "%.2f %.2f" % pos)
-        #self.radecLabel.setText()
-        #self.galLabel.setText()
+        
+        self.nameLabel.setText("<span style='font-weight: 600; color: blue;'>{}</span>".format(name))
+        self.posLabel.setText("AzEl: {0.az.value:.2f} az {0.alt.value:.2f} el".format(skycoord))
+        self.radecLabel.setText("{0.ra.value:.2f} {0.dec.value:.2f}".format(skycoord.transform_to('icrs')))
+        galco = skycoord.transform_to('galactic')
+        self.galLabel.setText(u"{0:.0f}°{1[2]:.0f}'{1[3]:.2f}\" l   {2:.0f}°{3[2]:.0f}'{3[3]:.2f}\" b".format(galco.l.signed_dms[0]*galco.l.signed_dms[1], \
+                                                                                                                                galco.l.signed_dms, \
+                                                                                                                                galco.b.signed_dms[0]*galco.b.signed_dms[1],\
+                                                                                                                                galco.b.signed_dms))
 
 class commandButtons(QtGui.QWidget):
     """
@@ -145,12 +166,17 @@ class commandButtons(QtGui.QWidget):
     """
     def __init__(self,parent):
         super(commandButtons,self).__init__(parent)
-        self.setGeometry(0,0,150,200)
+        #self.setGeometry(0,0,150,200)
+        screen = QtGui.QDesktopWidget().screenGeometry()         
+        self.setGeometry(0,20,screen.width(),60)
         gb = QtGui.QGroupBox(self)
-        gb.setTitle("Control")
-        gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
-        gb.setFixedSize(150,200)
-        layout = QtGui.QVBoxLayout(self)
+        #gb.setStyleSheet("QGroupBox {background: black; color: #ffffff; margin-top: 0.5em; margin-bottom: 0.5em;}")        
+        gb.setFixedSize(screen.width(),200)
+        layout = QtGui.QHBoxLayout(self)
+        #gb = QtGui.QGroupBox(self)
+        #gb.setTitle("Control")
+        #gb.setStyleSheet("QGroupBox {border: 2px solid gray; border-radius: 5px; margin-top: 0.5em;} QGroupBox::title {subcontrol-origin: margin; left: 10px; padding: 0 3px 0 3px;}")
+        #gb.setFixedSize(150,200)
         buttonWidth = 100
     
         stowButton = QtGui.QPushButton("Stow")
@@ -188,6 +214,7 @@ class commandButtons(QtGui.QWidget):
         layout.addWidget(calibrateButton)
         calibrateButton.clicked.connect(self.handleCalibrateButton)
 
+        layout = QtGui.QVBoxLayout(self)
         gb.setLayout(layout)
 
         self.trackSource = RadioSource("ts")

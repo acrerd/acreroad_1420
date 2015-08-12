@@ -7,7 +7,7 @@ Contact: frith.ronnie@gmail.com
 import time, astropy
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz, Angle
 from PyQt4 import QtGui,QtCore
 from drive import Drive
 
@@ -55,6 +55,22 @@ class SRT():
     def setMode(self,mode):
         self.mode = mode
 
+    def skycoord(self):
+        """
+        Returns the position information of the telescope in an astropy SkyCoord object.
+
+        Returns
+        -------
+        SkyCoord : An astropy SkyCoord.
+        """
+        position = self.getCurrentPos()
+        observatory = self.drive.location
+        time = self.drive.current_time
+
+        coord = SkyCoord(AltAz(az = position[0]*u.degree, alt = position[1]*u.degree, obstime = time, location = observatory))
+        return coord
+        
+        
     def azalt(self):
         """
         Returns the azimuth and altitude of the SRT by calling the status() method of the drive class.
@@ -163,12 +179,15 @@ class SRT():
         """
         """
         (tx,ty) = targetPos
+        targetPos = SkyCoord(AltAz(tx*u.deg,ty*u.deg,obstime=self.drive.current_time,location=self.drive.location))
         (cx,cy) = self.pos
+        realPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.drive.current_time,location=self.drive.location))
         d = 3
+        
         #print("Target: %f %f" % (tx,ty))
         #print("Current: %f %f" % (cx,cy))
         #print(abs(tx-cx),abs(ty-cy))
-        if (abs(tx-cx) <= d) and (abs(ty-cy) <= d):
+        if targetPos.separation(realPos).value <= d:
             #print("Finished slewing to " + str(self.getCurrentPos()))
             return True
         else:

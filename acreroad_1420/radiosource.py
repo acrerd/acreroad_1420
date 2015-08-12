@@ -9,6 +9,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS, Galactic
 import time, ephem
+import numpy as np
 
 
 class RadioSource():
@@ -31,6 +32,9 @@ class RadioSource():
         az = float(repr(sun.az))*(180/math.pi) # quick hack to go from DEG:ARCMIN:ARCSEC to 00.00 degs
         alt = float(repr(sun.alt))*(180/math.pi)
         self.pos = (az,alt)
+        now = Time(time.time(),format='unix')
+        altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.acreRoadAstropy)
+        self.skycoord = SkyCoord(altazframe)
         self.exists = True
 
     def moon(self):
@@ -40,6 +44,9 @@ class RadioSource():
         az = float(repr(moon.az))*(180/math.pi) 
         alt = float(repr(moon.alt))*(180/math.pi)
         self.pos = (az,alt)
+        now = Time(time.time(),format='unix')
+        altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.acreRoadAstropy)
+        self.skycoord = SkyCoord(altazframe)
         self.exists = True
         
 
@@ -57,6 +64,7 @@ class RadioSource():
         altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
         sourcealtaz = source.transform_to(altazframe)
         self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
+        self.skycoord = sourcealtaz
         return True
 
     def update(self):
@@ -73,6 +81,7 @@ class RadioSource():
             altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
             sourcealtaz = source.transform_to(altazframe)
             self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
+            self.skycoord = sourcealtaz
 
     def isVisible(self):
         """
@@ -119,3 +128,27 @@ def radec(azel):
 
 def galactic(azel):
     return (0.00,0.00)
+
+
+    
+class GalacticPlane():
+    points = []
+    def __init__(self,time=None, location=None):
+        self.time = time
+        self.location = location
+        self.update()
+
+    def update(self, n=50):
+        # We want to calculate the AltAz positions of the galactic plane
+        
+        c = SkyCoord([i for i in np.linspace(0, 360, n)], [0 for i in np.linspace(-90, 90.0, n)], frame="galactic", unit="deg", obstime = self.time, location=self.location)
+        c = c.transform_to(AltAz(obstime=self.time,location=self.location))
+
+        points = []
+        for point in c:
+            if point.alt.value > 0:
+                points.append((point.az.value, point.alt.value))
+        
+        self.points = points
+
+                

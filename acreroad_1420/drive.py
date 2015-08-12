@@ -124,10 +124,25 @@ class Drive():
         
         self.setLocation(location)
 
-        self.listen_thread =  threading.Thread(target=self._listener)
-        self.listen_thread.daemon = True
-        self.listen_thread.start()
+        if not self.sim:
+            self.listen_thread =  threading.Thread(target=self._listener)
+            self.listen_thread.daemon = True
+            self.listen_thread.start()
 
+    @property
+    def current_time(self):
+        """
+        Return the current UTC time as an AstroPy time object.
+        """
+        return  Time(datetime.datetime.utcnow(), location = self.location)
+
+    @property
+    def current_time_local(self):
+        """
+        return the current local time
+        """
+        return Time( datetime.datetime.now(), location = self.location)
+             
     def _openconnection(self, device, baud):
         self.ser = serial.Serial(device, baud, timeout=self.timeout)
 
