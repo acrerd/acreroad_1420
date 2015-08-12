@@ -193,22 +193,24 @@ class Drive():
                 self.calibrating=False
                 print string
         # A status string
-        elif string[0]=="s":
-            # Status strings are comma separated
-            #print string
-            d = string[2:].split(",")
-            try:
-                # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
-                if self._parse_floats(d[3]) < 0 : d[3] = str(np.pi - self._parse_floats(d[3]))
-                #self.az, self.alt = self._parse_floats(d[3])*(180/np.pi), self._parse_floats(d[4])*(180/np.pi)
-            except IndexError:
-                # Sometimes (early on?) the drive appears to produce
-                # an incomplete status string. These need to be
-                # ignored otherwise the parser crashes the listener
-                # process.
-                pass
-            #print self._parse_floats(d[3])%360
-            return d
+        # elif string[0]=="s":
+        #     # Status strings are comma separated
+        #     #print string
+        #     d = string[2:].split(",")
+        #     try:
+        #         # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
+        #         try:
+        #             az, alt = self._parse_floats(d[3]), self._parse_floats(d[4])
+        #             if az < 0 : d[3] = str(np.pi - az)
+        #             #self.az, self.alt = (az*(180/np.pi))%360, alt*(180/np.pi)
+        #     except IndexError:
+        #         # Sometimes (early on?) the drive appears to produce
+        #         # an incomplete status string. These need to be
+        #         # ignored otherwise the parser crashes the listener
+        #         # process.
+        #         pass
+        #     #print self._parse_floats(d[3])%360
+        #     return d
         elif string[0]=="a":
             if string[1]=="z" or string[1]=="l":
                 # This is an azimuth or an altitude click, update the position
@@ -397,7 +399,10 @@ class Drive():
         """
         self.homing = True
         command_str = "gH"
-        return self._command(command_str)
+        self._command(command_str)
+        home_pos = SkyCoord(AltAz(self.az_home*u.deg,self.el_home*u.deg,obstime=self.current_time,location=self.location))
+        while not self.slewSuccess(home_pos):
+            self.homing = False
 
     def stow(self):
         """
