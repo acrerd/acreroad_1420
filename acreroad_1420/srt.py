@@ -204,7 +204,6 @@ class SRT():
         The SRT will follow the source as it move across the sky.
         """
         if self.mode == Mode.SIM:
-            #print("Tracking " + src.getName())
             pos = src.getPos()
             self.slew(pos)
             self.status = Status.TRACKING
