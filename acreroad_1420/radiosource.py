@@ -22,7 +22,7 @@ class RadioSource():
         config = ConfigParser.SafeConfigParser()
         config.read('settings.cfg')
 
-       if not location:
+        if not location:
             observatory = config.get('observatory', 'location').split()
             location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
 
