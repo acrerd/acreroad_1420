@@ -10,20 +10,36 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS, Galactic
 import time, ephem
 import numpy as np
-
+import ConfigParser
 
 class RadioSource():
     """
     A container class for a radio source - holds position and other relevant information given by astropy and/or pyephem.
     """
-    def __init__(self,name):
+    def __init__(self,name, location=None):
         self.pos = (0,0) # (az,alt)
         self.name = name
-        self.acreRoadAstropy = EarthLocation(lat=55.9024278*u.deg,lon=-4.307582*u.deg,height=61*u.m)
+        config = ConfigParser.SafeConfigParser()
+        config.read('settings.cfg')
+
+       if not location:
+            observatory = config.get('observatory', 'location').split()
+            location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
+
+
+        self.location = location
+
         self.exists = False
         
         self.acreRoadPyEphem = ephem.Observer()
         self.acreRoadPyEphem.lon, self.acreRoadPyEphem.lat = '-4.3', '55.9'   #glasgow
+
+    def current_time_local(self):
+        """                                                                                                                                  
+        return the current local time                                                                                                        
+        """
+        return Time( datetime.datetime.now(), location = self.location)
+
 
     def sun(self):
         self.acreRoadPyEphem.date = ephem.now()
@@ -32,7 +48,7 @@ class RadioSource():
         az = float(repr(sun.az))*(180/math.pi) # quick hack to go from DEG:ARCMIN:ARCSEC to 00.00 degs
         alt = float(repr(sun.alt))*(180/math.pi)
         self.pos = (az,alt)
-        now = Time(time.time(),format='unix')
+        now = self.current_time_local()
         altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.acreRoadAstropy)
         self.skycoord = SkyCoord(altazframe)
         self.exists = True
