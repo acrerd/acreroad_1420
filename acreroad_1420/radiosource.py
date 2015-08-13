@@ -146,7 +146,7 @@ class GalacticPlane():
 
         points = []
         for point in c:
-            if point.alt.value > 0:
+            if point.alt.value > -10:
                 points.append((point.az.value, point.alt.value))
         
         self.points = points
