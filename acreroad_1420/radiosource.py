@@ -8,7 +8,7 @@ import astropy, math
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS, Galactic
-import time, ephem
+import time, ephem, datetime
 import numpy as np
 import ConfigParser
 
