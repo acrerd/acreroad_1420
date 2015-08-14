@@ -105,7 +105,7 @@ class Receiver():
         self.rx_con.set_center_freq(uhd.tune_request(freq_0 , -freq_offset), 0)
         self.rx_con.set_gain(gain, 0)
 
-    def save_spectral_power(self, filepath, fft_len=2048, int_time=5, samp_rate=self.samp_rate, eq_file=self.eq_file):
+    def save_spectral_power(self, filepath, fft_len=2048, int_time=5, samp_rate=None, eq_file=None):
         """
         Save the integrated spectrum from the telescope at regular intervals to an ASCI file
 
@@ -125,6 +125,9 @@ class Receiver():
            The file containing the equalisation profile. This defaults to the the profile
            used in the rest of the module.
         """
+
+        if not samp_rate: samp_rate = self.samp_rate
+        if not eq_file: eq_file = self.eq_file
 
         self.specflatfile = specflatfile(fft_len=2**11,fft_size=2**11,flat_file=eq_file,samp_rate=samp_rate)
         self.integrator = srt_integrator(fft_len=fft_len, int_time=int_time, reset_flag=0, samp_rate=samp_rate)
