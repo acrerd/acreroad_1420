@@ -73,7 +73,7 @@ class Receiver():
         
 
 
-    def _init_rx_connection(self, ettus_id, samp_rate=self.samp_rate, freq_0, freq_offset, gain):
+    def _init_rx_connection(self, ettus_id, samp_rate, freq_0, freq_offset, gain):
         """
         Establish a recieving connection to an Ettus device uing the UHD protocol.
 
