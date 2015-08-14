@@ -63,12 +63,12 @@ class Receiver():
         if not samp_rate:
             samp_rate = float(config.get('receiver', 'samp_rate'))
             self.samp_rate = samp_rate
-        if not samp_rate:
-            samp_rate = int(config.get('receiver', 'equalisation_file'))
+        if not eq_file:
+            eq_file = int(config.get('receiver', 'equalisation_file'))
         self.eq_file = eq_file
 
         # Initialise the RX stream from UHD
-        self._init_rx_connection(ettus_id, samp_rate, freq_0, freq_offset, gain)    
+        self._init_rx_connection(ettus_id, samp_rate, freq_0, freq_offset, source_gain)    
 
         
 
