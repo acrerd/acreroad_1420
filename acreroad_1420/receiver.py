@@ -61,7 +61,7 @@ class Receiver():
         if not freq_offset:
             freq_offset = float(config.get('receiver', 'freq_offset'))
         if not samp_rate:
-            samp_rate = int(config.get('receiver', 'samp_rate'))
+            samp_rate = float(config.get('receiver', 'samp_rate'))
             self.samp_rate = samp_rate
         if not samp_rate:
             samp_rate = int(config.get('receiver', 'equalisation_file'))
