@@ -179,6 +179,12 @@ class Drive():
         while True:
             line = self.ser.readline()
             self.parse(line)
+
+    def _stat_update(self, az, alt):
+        self.az, self.alt = az, alt
+        if self.slewSuccess(self.target):
+            self.slewing = False
+            self.homing = False
             
     def parse(self, string):
         # A specific output from a function
@@ -186,36 +192,36 @@ class Drive():
             if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
                 if d['Taz'] < 0: d['Taz'] = np.pi - d['Taz']
-
-                self.az, self.alt = d['Taz']%(2*np.pi), d['Talt']%(0.5*np.pi)                
+                self._stat_update(d['Taz']%(2*np.pi), d['Talt']%(0.5*np.pi))
                 return d
             if string[1]=='c': # This is the return from a calibration run
                 self.calibrating=False
                 print string
         # A status string
-        # elif string[0]=="s":
-        #     # Status strings are comma separated
-        #     #print string
-        #     d = string[2:].split(",")
-        #     try:
-        #         # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
-        #         try:
-        #             az, alt = self._parse_floats(d[3]), self._parse_floats(d[4])
-        #             if az < 0 : d[3] = str(np.pi - az)
-        #             #self.az, self.alt = (az*(180/np.pi))%360, alt*(180/np.pi)
-        #     except IndexError:
-        #         # Sometimes (early on?) the drive appears to produce
-        #         # an incomplete status string. These need to be
-        #         # ignored otherwise the parser crashes the listener
-        #         # process.
-        #         pass
-        #     #print self._parse_floats(d[3])%360
-        #     return d
+        elif string[0]=="s":
+            # Status strings are comma separated
+            #print string
+            d = string[2:].split(",")
+            try:
+                # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
+                try:
+                    az, alt = self._parse_floats(d[3]), self._parse_floats(d[4])
+                    if az < 0 : d[3] = str(np.pi - az)
+                    #self._stat_update( self._r2d(az)%360, self._r2d(alt) )
+                except:
+                    pass
+            except IndexError:
+                # Sometimes (early on?) the drive appears to produce
+                # an incomplete status string. These need to be
+                # ignored otherwise the parser crashes the listener
+                # process.
+                pass
+            return d
         elif string[0]=="a":
             if string[1]=="z" or string[1]=="l":
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
-                #self.az, self.alt = self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3]))
+                #self._stat_update(self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3])))
         elif string[0]=="!":
             # This is an error string
             print string[1:]
@@ -226,16 +232,25 @@ class Drive():
                 d = string.split()
                 if not d[1][0] == "o":
                     # This is a pseudo-status string
-                    self.az, self.alt = self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3]))
+                    self._stat_update(self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3])))
             pass
         #else: print string
 
     def slewSuccess(self,targetPos):
         """
         """
+        if type(targetPos) is tuple:
+            (cx, cy) = targetPos
+            #if cx > 90.0: cx -= (cx - 90) 
+            targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
+            
         (cx,cy) = self.status()['az'], self.status()['alt']
         realPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
         d = 3
+
+        print targetPos
+        print realPos
+        print targetPos.separation(realPos).value
         
         if targetPos.separation(realPos).value <= d:
             #print("Finished slewing to " + str(self.getCurrentPos()))
@@ -368,27 +383,30 @@ class Drive():
         if not type(skycoord)==astropy.coordinates.sky_coordinate.SkyCoord:
             raise ValueError("The sky coordinates provided aren't an astropy SkyCoord object!'")
 
+        self.tracking = False
+        self.slewing = True
+
         # To do : We need to make sure that this behaves nicely with a
         # list of coordinates as well as single ones.
-
+        
         time = Time.now()
 
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
+        self.target = skycoord
         self.status()
         # construct a command string
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         # pass the slew-to command to the controller
         if self._command(command_str):
             if track:
+                self.tracking = True
                 command_str = "q"
                 self._command(command_str)
                 command_str = "ts"
                 self._command(command_str)
-            while not self.slewSuccess(skycoord):
-                self.slewing = True
-            else:
-                self.slewing = False
+            self.slewing = True
         else:
+            self.slewing = False
             raise ControllerException("The telescope has failed to slew to the requested location")
 
     def home(self):
@@ -400,9 +418,7 @@ class Drive():
         self.homing = True
         command_str = "gH"
         self._command(command_str)
-        home_pos = SkyCoord(AltAz(self.az_home*u.deg,self.el_home*u.deg,obstime=self.current_time,location=self.location))
-        while not self.slewSuccess(home_pos):
-            self.homing = False
+        home_pos = SkyCoord(AltAz(self.el_home*u.deg,self.az_home*u.deg,obstime=self.current_time,location=self.location))
 
     def stow(self):
         """

@@ -84,9 +84,9 @@ class Skymap(QtGui.QWidget):
         #    self.setCurrentPos(self.srt.azalt())
 
         if self.srt.getStatus() == Status.INIT:
-            self.setTargetPos((90,0))
+            self.setTargetPos((self.srt.drive.az_home, self.srt.drive.el_home))
             targetPos = self.getTargetPos()
-            if self.srt.slewSuccess(targetPos) == True:
+            if self.srt.drive.slewSuccess(targetPos) == True:
                 self.srt.setStatus(Status.READY)
 
         if self.srt.getMode() == Mode.LIVE:
@@ -98,7 +98,7 @@ class Skymap(QtGui.QWidget):
 
         # potential problem here if the telescope never reaches its destination then the status will never be ready and a hard reset is required.
         if self.srt.getStatus() == Status.SLEWING:
-            if self.srt.slewSuccess(targetPos) == True:
+            if self.srt.drive.slewSuccess(targetPos) == True:
                 self.srt.setStatus(Status.READY)
 
         self.parent().antennaCoordsInfo.updateCoords()

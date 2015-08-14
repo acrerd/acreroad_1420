@@ -8,22 +8,38 @@ import astropy, math
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS, Galactic
-import time, ephem
+import time, ephem, datetime
 import numpy as np
-
+import ConfigParser
 
 class RadioSource():
     """
     A container class for a radio source - holds position and other relevant information given by astropy and/or pyephem.
     """
-    def __init__(self,name):
+    def __init__(self,name, location=None):
         self.pos = (0,0) # (az,alt)
         self.name = name
-        self.acreRoadAstropy = EarthLocation(lat=55.9024278*u.deg,lon=-4.307582*u.deg,height=61*u.m)
+        config = ConfigParser.SafeConfigParser()
+        config.read('settings.cfg')
+
+        if not location:
+            observatory = config.get('observatory', 'location').split()
+            location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
+
+
+        self.location = location
+
         self.exists = False
         
         self.acreRoadPyEphem = ephem.Observer()
         self.acreRoadPyEphem.lon, self.acreRoadPyEphem.lat = '-4.3', '55.9'   #glasgow
+
+    def current_time_local(self):
+        """                                                                                                                                  
+        return the current local time                                                                                                        
+        """
+        return Time( datetime.datetime.now(), location = self.location)
+
 
     def sun(self):
         self.acreRoadPyEphem.date = ephem.now()
@@ -32,8 +48,8 @@ class RadioSource():
         az = float(repr(sun.az))*(180/math.pi) # quick hack to go from DEG:ARCMIN:ARCSEC to 00.00 degs
         alt = float(repr(sun.alt))*(180/math.pi)
         self.pos = (az,alt)
-        now = Time(time.time(),format='unix')
-        altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.acreRoadAstropy)
+        now = self.current_time_local()
+        altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.location)
         self.skycoord = SkyCoord(altazframe)
         self.exists = True
 
@@ -44,8 +60,8 @@ class RadioSource():
         az = float(repr(moon.az))*(180/math.pi) 
         alt = float(repr(moon.alt))*(180/math.pi)
         self.pos = (az,alt)
-        now = Time(time.time(),format='unix')
-        altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.acreRoadAstropy)
+        now = self.current_time_local()
+        altazframe = AltAz(az=az*u.degree, alt=alt*u.degree, obstime=now,location=self.location)
         self.skycoord = SkyCoord(altazframe)
         self.exists = True
         
@@ -60,8 +76,8 @@ class RadioSource():
         except astropy.coordinates.name_resolve.NameResolveError:
             return False
         self.exists = True
-        now = Time(time.time(),format='unix')
-        altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
+        now = self.current_time_local()
+        altazframe = AltAz(obstime=now,location=self.location)
         sourcealtaz = source.transform_to(altazframe)
         self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
         self.skycoord = sourcealtaz
@@ -77,8 +93,8 @@ class RadioSource():
             self.moon()
         else:
             source = SkyCoord.from_name(self.name)
-            now = Time(time.time(),format='unix')
-            altazframe = AltAz(obstime=now,location=self.acreRoadAstropy)
+            now = self.current_time_local()
+            altazframe = AltAz(obstime=now,location=self.location)
             sourcealtaz = source.transform_to(altazframe)
             self.pos = (float(sourcealtaz.az.degree),float(sourcealtaz.alt.degree))
             self.skycoord = sourcealtaz
@@ -117,7 +133,8 @@ def radec(azel):
     Return current coordinate in right ascention and declination.
     """
     (az,el) = azel
-    now = Time(time.time(),format='unix')
+    now = Time( datetime.datetime.now(), location = self.location)
+
     acreRoad = EarthLocation(lat=55.9*u.deg,lon=-4.3*u.deg,height=61*u.m) # change this
     azelframe = AltAz(az*u.deg,el*u.deg,obstime=now,location=acreRoad)
     source = SkyCoord(azelframe)
@@ -146,7 +163,7 @@ class GalacticPlane():
 
         points = []
         for point in c:
-            if point.alt.value > 0:
+            if point.alt.value > -10:
                 points.append((point.az.value, point.alt.value))
         
         self.points = points
