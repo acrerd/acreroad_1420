@@ -1,6 +1,4 @@
 """
-
-
 acreroad_1420 Drive software
 
 Software designed to drive the 1420 MHz telescope on the roof of the
