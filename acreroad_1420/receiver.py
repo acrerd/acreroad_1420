@@ -38,7 +38,7 @@ import time
 # Parse config files
 import ConfigParser
 
-class Receiver():
+class Receiver(gr.top_block):
     def __init__(self, ettus_id=None, \
                  source_gain = None, \
                  freq_0=None, \
