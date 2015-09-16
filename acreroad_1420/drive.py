@@ -47,8 +47,8 @@ class Drive():
 
     # Calibration variables
 
-    az_home = 90.0
-    el_home = -8.5
+    #az_home = 90.0
+    #el_home = -8.5
 
     # Operational flags
     calibrating = False
@@ -62,7 +62,7 @@ class Drive():
     
     stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
     
-    def __init__(self, device, baud, timeout=None, simulate=0, calibration=None, location=None):
+    def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -96,7 +96,7 @@ class Drive():
         >>> connection = drive.Drive('/dev/tty.usbserial', 9600, simulate=1)
         
         """
-        config = ConfigParser.SafeConfigParser()
+        config = self.config = ConfigParser.SafeConfigParser()
         config.read('settings.cfg')
 
         homealtaz = config.get('offsets', 'home').split()
@@ -115,9 +115,16 @@ class Drive():
 
         # Give the Arduino a chance to power-up
         time.sleep(1)
-        
+
+        if not calibration:
+            try: calibration = config.get('offsets','calibration')
+            except: pass
         self.calibrate(calibration)
+
+
         self.set_status_cadence(200)
+        self.set_status_message('za')
+        self.target = (self.az_home, self.el_home)
         self.home()
 
         self.setTime()
@@ -186,26 +193,29 @@ class Drive():
             
     def parse(self, string):
         # A specific output from a function
+        if len(string)<1: return 0
         if string[0]==">":
             if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
-                if d['Taz'] < 0: d['Taz'] = np.pi - d['Taz']
-                self._stat_update(d['Taz']%(2*np.pi), d['Talt']%(0.5*np.pi))
+                #if d['Taz'] < 0: d['Taz'] = np.pi - d['Taz']
+                #self._stat_update(d['Taz']%(2*np.pi), d['Talt']%(0.5*np.pi))
                 return d
             if string[1]=='c': # This is the return from a calibration run
                 self.calibrating=False
+                self.config.set('offsets','calibration',string[2:])
+                self.calibration = string[2:]
                 print string
         # A status string
-        elif string[0]=="s":
+        elif string[0]=="s" and len(string)>1:
             # Status strings are comma separated
             #print string
             d = string[2:].split(",")
             try:
                 # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
                 try:
-                    az, alt = self._parse_floats(d[3]), self._parse_floats(d[4])
-                    if az < 0 : d[3] = str(np.pi - az)
-                    #self._stat_update( self._r2d(az)%360, self._r2d(alt) )
+                    az, alt = self._parse_floats(d[0]), self._parse_floats(d[1])
+                    az = str(np.pi - az)
+                    self._stat_update( self._r2d(az), self._r2d(alt) )
                 except:
                     pass
             except IndexError:
@@ -219,7 +229,7 @@ class Drive():
             if string[1]=="z" or string[1]=="l":
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
-                #self._stat_update(self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3])))
+                self._stat_update(self._r2d(self._parse_floats(d[3])), self._r2d(self._parse_floats(d[4])))
         elif string[0]=="!":
             # This is an error string
             print string[1:]
@@ -229,8 +239,9 @@ class Drive():
                 # This is a scheduler comment
                 d = string.split()
                 if not d[1][0] == "o":
+                    pass
                     # This is a pseudo-status string
-                    self._stat_update(self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3])))
+                    # self._stat_update(self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3])))
             pass
         #else: print string
 
@@ -242,13 +253,13 @@ class Drive():
             #if cx > 90.0: cx -= (cx - 90) 
             targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
             
-        (cx,cy) = self.status()['az'], self.status()['alt']
-        realPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
+        cx,cy = self.status()['az'], self.status()['alt']
+        realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
         d = 3
 
-        print targetPos
-        print realPos
-        print targetPos.separation(realPos).value
+        #print targetPos
+        #print realPos
+        #print targetPos.separation(realPos).value
         
         if targetPos.separation(realPos).value <= d:
             #print("Finished slewing to " + str(self.getCurrentPos()))
@@ -269,7 +280,7 @@ class Drive():
         Converts degrees to radians.
         """
         radians =  degrees*(np.pi/180)
-        if radians < 0 : radians += (2*np.pi)
+        if radians < 0 : radians = (np.pi-radians)
         return radians%(2*np.pi)
 
     def _parse_floats(self, string):
@@ -304,6 +315,12 @@ class Drive():
         Sets the cadence of the status messages from the controller.
         """
         return self._command("s {}".format(int(interval)))
+
+    def set_status_message(self, message):
+        """
+        Determines the output of the status messages produced by the controller.
+        """
+        return self._command("s {}".format(message))
 
     def calibrate(self, values=None):
 
@@ -378,8 +395,11 @@ class Drive():
 
         """
 
+
         if not type(skycoord)==astropy.coordinates.sky_coordinate.SkyCoord:
             raise ValueError("The sky coordinates provided aren't an astropy SkyCoord object!'")
+
+        self.target = skycoord
 
         self.tracking = False
         self.slewing = True
@@ -417,14 +437,21 @@ class Drive():
         command_str = "gH"
         self._command(command_str)
         home_pos = SkyCoord(AltAz(self.el_home*u.deg,self.az_home*u.deg,obstime=self.current_time,location=self.location))
+        self.target = home_pos
 
     def stow(self):
         """
         Slews the telescope to the stowing position (pointed at the zenith)
         """
-        zenith = 90*(np.pi/180)
+        zenith = self._d2r(90)
         command_str = "gh 2.0 "+str(zenith)
+        self.target = (120.0, 90.0)
         return self._command(command_str)
+        
+
+    def skycoord():
+        cx,cy = self.status()['az'], self.status()['alt']
+        realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
 
 
     def status(self):
@@ -448,7 +475,7 @@ class Drive():
         """
         command_str = "S"
         #self._command(command_str)
-        return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt, 'az':self.az}
+        return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt%90, 'az':self.az%360}
 
 
 class ControllerException(Exception):

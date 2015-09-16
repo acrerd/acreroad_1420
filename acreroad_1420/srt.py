@@ -164,8 +164,8 @@ class SRT():
             print("Slewing in live mode.")
             (x,y) = pos # target - mouse click position in degrees
             (cx,cy) = self.pos # current position in degrees.
-            print("Target Pos: (" + str(x) + "," + str(y) + ")")
-            print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
+            #print("Target Pos: (" + str(x) + "," + str(y) + ")")
+            #print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             # construct a SkyCoord in correct coordinate frame.
             # TODO: fix this -- drive.location
             acreRoadAstropy = self.location
@@ -184,9 +184,6 @@ class SRT():
         realPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.drive.current_time,location=self.drive.location))
         d = 3
         
-        #print("Target: %f %f" % (tx,ty))
-        #print("Current: %f %f" % (cx,cy))
-        #print(abs(tx-cx),abs(ty-cy))
         if targetPos.separation(realPos).value <= d:
             #print("Finished slewing to " + str(self.getCurrentPos()))
             return True

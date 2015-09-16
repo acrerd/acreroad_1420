@@ -244,7 +244,7 @@ class commandButtons(QtGui.QWidget):
         """
         #homeOffset = self.getOffset().split()
         #self.parent().skymap.setTargetPos((float(homeOffset[0]),float(homeOffset[1])))
-        self.parent().skymap.setTargetPos((90,0))
+        self.parent().skymap.setTargetPos((self.parent.srt.drive.az_home,self.parent.srt.drive.el_home))
         self.parent().srt.home()
 
     def handleSlewButton(self):
