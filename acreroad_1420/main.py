@@ -30,7 +30,7 @@ class mainWindow(QtGui.QMainWindow):
         super(mainWindow,self).__init__(parent=parent)
         screen = QtGui.QDesktopWidget().screenGeometry()        
         #self.showMaximized()
-        self.setGeometry(50,50,800,600)
+        self.setGeometry(50,50,700,400)
         self.setWindowTitle("SRT Drive Control")
         self.setFocus()
         self.srt = srt
