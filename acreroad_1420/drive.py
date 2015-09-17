@@ -31,6 +31,9 @@ import astropy.units as u
 import serial
 from astropy.time import Time
 import threading
+from os.path import expanduser, isfile, join
+import os.path
+
 
 
 class Drive():
@@ -62,7 +65,7 @@ class Drive():
     
     stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
     
-    def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None):
+    def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None, persist=True):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -88,7 +91,7 @@ class Drive():
            The default is `None` which forces a calibration run to be carried-out.
         location : astropy.coordinates.EarthLocation object
            The Earth location of the telescope. The default is `None`, which sets the location as Acre Road Observatory, Glasgow.
-
+        
         Examples
         --------
         
@@ -96,12 +99,34 @@ class Drive():
         >>> connection = drive.Drive('/dev/tty.usbserial', 9600, simulate=1)
         
         """
-        config = self.config = ConfigParser.SafeConfigParser()
-        config.read('settings.cfg')
 
+        #
+        # Configuration settings are kept in a config file
+        #
+        
+        # Look for the config file in sensible places
+
+        home_dir = expanduser('~')
+        config_file_name = join(home_dir,"/.acreroad_1420/settings.cfg")
+
+        config = self.config = ConfigParser.SafeConfigParser()
+        if isfile(config_file_name):
+            config.read(config_file_name)
+        else:
+            config.read('settings.cfg')
+                                    
+        #
+        # Fetch the sky position which corresponds to the 'home' position of the telescope
+        #
+            
         homealtaz = config.get('offsets', 'home').split()
         self.az_home, self.el_home = float(homealtaz[0]), float(homealtaz[1])
 
+        #
+        # Pull the location of the telesope in from the configuration file if it isn't given as an argument to the
+        # class initiator.
+        #
+        
         if not location:
             observatory = config.get('observatory', 'location').split()
             location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
@@ -110,9 +135,19 @@ class Drive():
         self.sim = simulate
         self.timeout = timeout
         self.location = location
-        # Initialise the connection
+
+        #
+        # Initialise the connection to the arduino Note that this can
+        # be complicated by the ability of the device name to change
+        # when disconnected and reconnected, so a search is
+        # required. This is now handled by the `_open_connection()`
+        # method.
+        if not device:
+            device = config.get('arduino','dev')
+        
         if not self.sim: self._openconnection(device, baud)
 
+        
         # Give the Arduino a chance to power-up
         time.sleep(1)
 
@@ -121,14 +156,19 @@ class Drive():
             except: pass
         self.calibrate(calibration)
 
-
+        # Set the format we want to see status strings produced in; we just want azimuth and altitude.
         self.set_status_cadence(200)
         self.set_status_message('za')
         self.target = (self.az_home, self.el_home)
-        self.home()
 
+        if not persist:
+            # Automatically home the telescope
+            self.home()
+
+        # Set the Arduino clock
         self.setTime()
-        
+
+        # Tell the Arduino where it is
         self.setLocation(location)
 
         if not self.sim:
@@ -151,7 +191,19 @@ class Drive():
         return Time( datetime.datetime.now(), location = self.location)
              
     def _openconnection(self, device, baud):
-        self.ser = serial.Serial(device, baud, timeout=self.timeout)
+        try:
+            self.ser = serial.Serial(device, baud, timeout=self.timeout)
+        except:
+            # The arduino might be connected, but it's not at that
+            # device address, so let's have a look around.
+            import serial.tools.list_ports
+            ports = list(serial.tools.list_ports.comports())
+            for p in ports:
+                if "Arduino" in p[1]:
+                    device = "/dev/"+p[0]
+                else:
+                    raise IOError('Could not communicate with any Arduino on this system; are you sure it\'s connected?')
+            self._openconnection(device, baud)
 
     def _command(self, string):
         """
@@ -192,26 +244,25 @@ class Drive():
             self.homing = False
             
     def parse(self, string):
-        # A specific output from a function
+        # Ignore empty lines
         if len(string)<1: return 0
+        
+        # A specific output from a function
         if string[0]==">":
             if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
-                #if d['Taz'] < 0: d['Taz'] = np.pi - d['Taz']
-                #self._stat_update(d['Taz']%(2*np.pi), d['Talt']%(0.5*np.pi))
                 return d
             if string[1]=='c': # This is the return from a calibration run
                 self.calibrating=False
                 self.config.set('offsets','calibration',string[2:])
                 self.calibration = string[2:]
                 print string
+
         # A status string
         elif string[0]=="s" and len(string)>1:
             # Status strings are comma separated
-            #print string
             d = string[2:].split(",")
             try:
-                # We'll disable reading status strings for the moment, as they seem to be very misleading to the telescope :(
                 try:
                     az, alt = self._parse_floats(d[0]), self._parse_floats(d[1])
                     az = str(np.pi - az)
@@ -233,16 +284,15 @@ class Drive():
         elif string[0]=="!":
             # This is an error string
             print string[1:]
-        elif string[0]=="#":
-            # This is a comment string
-            if string[1:18] == "FollowingSchedule":
-                # This is a scheduler comment
-                d = string.split()
-                if not d[1][0] == "o":
-                    pass
-                    # This is a pseudo-status string
-                    # self._stat_update(self._r2d(self._parse_floats(d[2])), self._r2d(self._parse_floats(d[3])))
-            pass
+        # elif string[0]=="#":
+        #     # This is a comment string
+        #     if string[1:18] == "FollowingSchedule":
+        #         # This is a scheduler comment
+        #         d = string.split()
+        #         if not d[1][0] == "o":
+        #             pass
+
+        #    pass
         #else: print string
 
     def slewSuccess(self,targetPos):
@@ -272,7 +322,7 @@ class Drive():
         Converts radians to degrees.
         """
         degrees = radians*(180/np.pi)
-        if degrees < 0 : degrees += 360
+        if degrees < 0 : 180 - degrees 
         return degrees%360
         
     def _d2r(self, degrees):

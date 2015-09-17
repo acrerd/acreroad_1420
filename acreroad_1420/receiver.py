@@ -46,6 +46,8 @@ class Receiver(gr.top_block):
                  samp_rate=None, \
                  eq_file=None
     ):
+        gr.top_block.__init__(self, "SRT Recorder")
+        
         # Access the configuration file
         # TODO Move this to a better location within the entire package.
 
