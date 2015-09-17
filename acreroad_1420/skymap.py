@@ -25,7 +25,7 @@ class Skymap(QtGui.QWidget):
     def __init__(self,parent=None, time=None, location=None):
         QtGui.QWidget.__init__(self,parent=parent)
         screen = QtGui.QDesktopWidget().screenGeometry()         
-        x,y,w,h = (0,70,screen.width()-300,screen.height()-115) #probably should be passed as argument in constructor
+        x,y,w,h = (0,70,500,350) #probably should be passed as argument in constructor
         self.sceneSize = (x,y,w,h)
         self.scene = QtGui.QGraphicsScene(self)
         self.setGeometry(QtCore.QRect(x,y,w,h))
