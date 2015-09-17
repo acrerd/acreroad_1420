@@ -140,7 +140,7 @@ class Drive():
         # Initialise the connection to the arduino Note that this can
         # be complicated by the ability of the device name to change
         # when disconnected and reconnected, so a search is
-        # required. This is now handled by the `_open_connection()`
+        # required. This is now handled by the `_openconnection()`
         # method.
         if not device:
             device = config.get('arduino','dev')
@@ -201,8 +201,7 @@ class Drive():
             for p in ports:
                 if "ACM" in p[0]:
                     device = p[0]
-                else:
-                    raise IOError('Could not communicate with any Arduino on this system; are you sure it\'s connected?')
+                    break
             self._openconnection(device, baud)
 
     def _command(self, string):
