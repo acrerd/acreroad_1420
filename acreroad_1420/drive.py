@@ -193,7 +193,7 @@ class Drive():
     def _openconnection(self, device, baud):
         try:
             self.ser = serial.Serial(device, baud, timeout=self.timeout)
-        except:
+        except serial.SerialException:
             # The arduino might be connected, but it's not at that
             # device address, so let's have a look around.
             import serial.tools.list_ports
