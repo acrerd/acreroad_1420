@@ -240,7 +240,7 @@ class Drive():
 
     def _stat_update(self, az, alt):
         self.az, self.alt = az, alt
-        az = az + 90
+        az = az
         if self.slewSuccess(self.target):
             self.slewing = False
             self.homing = False
