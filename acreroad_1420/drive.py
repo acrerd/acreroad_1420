@@ -191,6 +191,7 @@ class Drive():
         return Time( datetime.datetime.now(), location = self.location)
              
     def _openconnection(self, device, baud):
+        from serial import SerialException
         try:
             self.ser = serial.Serial(device, baud, timeout=self.timeout)
         except SerialException:
