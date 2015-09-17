@@ -199,8 +199,8 @@ class Drive():
             import serial.tools.list_ports
             ports = list(serial.tools.list_ports.comports())
             for p in ports:
-                if "Arduino" in p[1]:
-                    device = "/dev/"+p[0]
+                if "ACM" in p[0]:
+                    device = p[0]
                 else:
                     raise IOError('Could not communicate with any Arduino on this system; are you sure it\'s connected?')
             self._openconnection(device, baud)
