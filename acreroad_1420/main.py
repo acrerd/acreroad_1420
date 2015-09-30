@@ -13,6 +13,9 @@ from skymap import Skymap
 from srt import SRT, Status, Mode
 from radiosource import RadioSource,radec,galactic
 from astropy.time import Time
+from formlayout import fedit
+import astropy
+from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
 
 class SlewToggle:
     ON = 0
@@ -253,39 +256,54 @@ class commandButtons(QtGui.QWidget):
         """
         if self.slewToggle == SlewToggle.ON:
             self.slewToggle = SlewToggle.OFF
-            print("Slew toggle OFF")
+            #print("Slew toggle OFF")
         elif self.slewToggle == SlewToggle.OFF:
             self.slewToggle = SlewToggle.ON
-            print("Slew toggle ON")
+            #print("Slew toggle ON")
+
+    def _parseInput(self, data):
+        eq, ho, ga = data[0], data[1], data[2]
+        if  (not eq[0] == 'None') and (not eq[1] == 'None'):
+            frame = 'ICRS'
+            # "Parsing an RA and Dec"
+            c = SkyCoord(ra=eq[0], dec=eq[1], frame='icrs')
+            
+        elif (not ho[0]=='None') and (not ho[1]=='None'):
+            # Parsing a horizontal coordinate
+            c = SkyCoord(AltAz(ho[0], ho[1], obstime=self.parent().srt.drive.current_time, location=self.parent().drive.location))
+            
+        elif (not ga[0]=='None') and (not ga[1]=='None'):
+            # Parsing a galactic coordinate
+            c = SkyCoord(l=ga[0], b=ga[1], frame='galactic')
+
+        else:
+            # No valid coordinates were passed
+            return None
+        return c
 
     def handleSlewToCoordButton(self):
         """
         An input window will be presented where AzEl coordinates are required to be input.  The SRT will then slew to these coordinates.
         """
-        azel, ok = QtGui.QInputDialog.getText(self, 'Input', 
-            'Enter Az El:')
-        
-        if ok:
-            # check values
-            azs,els = azel.split(" ")
-            azf = float(azs)
-            elf = float(els)
-            valid = False
-            if azf < 0 or azf > 360:
-                valid = False
-            else:
-                valid = True
+        # azel, ok = QtGui.QInputDialog.getText(self, 'Input', 
+        #     'Enter Az Alt:')
 
-            if elf < 0 or elf > 90:
-                valid = False
-            else:
-                valid = True
-            # slew to coords
-            if valid:
+        # Use formlayout to make the form
+        equatorialgroup = ( [('Right Ascension', ''), ('Declination', '')], "Equatorial", "Input equatorial coordinates." )
+        horizontalgroup = ( [('Azimuth',''), ('Altitude','')], "Horizontal", "Input Horizontal coordinates." )
+        galacticgroup   = ( [('Latitude', ''), ('Longitude', '')], "Galactic", "Input galactic coordinates." )
+
+        result = fedit([equatorialgroup, horizontalgroup, galacticgroup])
+        print result
+        if result:
+
+            # Need to parse the output of the form
+            skycoord = self._parseInput(result)
+            if skycoord:
                 #self.parent().srt.slew(self.parent().skymap,(azf,elf))
                 currentPos = self.parent().srt.getCurrentPos()
-                targetPos = (azf,elf)
-                state = self.parent().srt.getStatus()
+                targetPos = skycoord
+                state = self.parent().srt.drive.skycoord()
                 if state != Status.SLEWING:
                     if targetPos == currentPos:
                         print("Already at that position.")

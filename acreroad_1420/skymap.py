@@ -141,7 +141,16 @@ class Skymap(QtGui.QWidget):
         return self.srt.getCurrentPos()
 
     def setTargetPos(self,pos):
-        self.targetPos = pos
+        print type(pos)
+        if isinstance(pos, tuple):
+            self.targetPos = pos
+        else:
+            print "is skycoord"
+            now = Time.now()
+            altazframe = AltAz(obstime=now,location=self.location)
+            apos = pos.transform_to(altazframe)
+            xf, yf = apos.az.value, apos.alt.value
+            self.targetPos = (xf, yf)
 
     def getTargetPos(self):
         return self.targetPos

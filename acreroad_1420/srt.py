@@ -130,11 +130,18 @@ class SRT():
         """
         delay = 0.05
         self.status = Status.SLEWING
+            
         if self.mode == Mode.SIM:
             print("Slewing in sim mode.")
-            (xf,yf) = pos # target position in degrees
-            x = int(xf)
-            y = int(yf)
+            if isinstance(pos,SkyCoord):
+                now = Time.now()
+                altazframe = AltAz(obstime=now,location=self.drive.location)
+                apos = pos.transform_to(altazframe)
+                x, y = int(apos.az.value), int(apos.alt.value)
+            else:
+                (xf,yf) = pos # target position in degrees
+                x = int(xf)
+                y = int(yf)
             (cxf,cyf) = self.pos # current position in degrees
             cx = int(cxf)
             cy = int(cyf)
@@ -162,8 +169,8 @@ class SRT():
             # This is where live code goes
             # remember self.getCurrentPos() is now in degrees in azalt - NOT pixel coordinates.
             print("Slewing in live mode.")
-            (x,y) = pos # target - mouse click position in degrees
-            (cx,cy) = self.pos # current position in degrees.
+            #(x,y) = pos # target - mouse click position in degrees
+            #(cx,cy) = self.pos # current position in degrees.
             #print("Target Pos: (" + str(x) + "," + str(y) + ")")
             #print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             # construct a SkyCoord in correct coordinate frame.

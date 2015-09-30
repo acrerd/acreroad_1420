@@ -307,7 +307,7 @@ class Drive():
             
         cx,cy = self.status()['az'], self.status()['alt']
         realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
-        d = 3
+        d = 1
 
         #print targetPos
         #print realPos
@@ -501,7 +501,7 @@ class Drive():
         return self._command(command_str)
         
 
-    def skycoord():
+    def skycoord(self):
         cx,cy = self.status()['az'], self.status()['alt']
         realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
 
