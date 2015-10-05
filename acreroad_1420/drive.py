@@ -107,7 +107,7 @@ class Drive():
         # Look for the config file in sensible places
 
         home_dir = expanduser('~')
-        config_file_name = join(home_dir,"/.acreroad_1420/settings.cfg")
+        config_file_name = home_dir+"/.acreroad_1420/settings.cfg"
 
         config = self.config = ConfigParser.SafeConfigParser()
         if isfile(config_file_name):
@@ -478,6 +478,20 @@ class Drive():
         else:
             self.slewing = False
             raise ControllerException("The telescope has failed to slew to the requested location")
+
+    def track(self, tracking=True):
+        if tracking:
+            self.tracking = True
+            command_str = "q"
+            self._command(command_str)
+            command_str = "ts"
+            self._command(command_str)
+        else: 
+            self.tracking=False
+            command_str = "q"
+            self._command(command_str)
+            command_str = "ts 0.0"
+            self._command(command_str)
 
     def home(self):
         """

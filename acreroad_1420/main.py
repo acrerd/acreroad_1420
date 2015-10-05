@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 """
@@ -16,6 +16,10 @@ from astropy.time import Time
 from formlayout import fedit
 import astropy
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
+
+from os.path import expanduser, isfile, join
+import os.path
+
 
 class SlewToggle:
     ON = 0
@@ -38,7 +42,7 @@ class mainWindow(QtGui.QMainWindow):
         self.setFocus()
         self.srt = srt
         self.skymap = Skymap(self, time=srt.drive.current_time, location=srt.drive.location)
-        self.skymap.init(catalogue) # this must be called to get the current position of srt to diplay it on the skymap.
+        self.skymap.init_cat(catalogue) # this must be called to get the current position of srt to diplay it on the skymap.
 
         self.commandButtons = commandButtons(self)
         self.antennaCoordsInfo = antennaCoordsInfo(self)
@@ -75,10 +79,10 @@ class antennaCoordsInfo(QtGui.QWidget):
     def __init__(self,parent):
         super(antennaCoordsInfo,self).__init__(parent)
         screen = QtGui.QDesktopWidget().screenGeometry()         
-        self.setGeometry(0,-8,screen.width(),38)
+        self.setGeometry(0,-8,700,38)
         gb = QtGui.QGroupBox(self)
         #gb.setTitle("Antenna Coordinates")
-        gb.setStyleSheet("QGroupBox {background: black; color: #ffffff; margin-top: 0.5em; margin-bottom: 0.5em;}")        
+        gb.setStyleSheet("QGroupBox {background: black; color: #ffffff; margin-top: 0.5em; margin-bottom: 0.5em; font-size: 10pt;}")        
         gb.setFixedSize(screen.width(),200)
         layout = QtGui.QHBoxLayout(self)
         #self.setLayout(layout)
@@ -108,12 +112,12 @@ class antennaCoordsInfo(QtGui.QWidget):
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
         currentPos = self.parent().getSRT().skycoord()
-        self.posLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.az.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>az</span> <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.alt.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>alt</span>".format(currentPos))
-        self.radecLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.ra.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>ra</span> <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.dec.value:.2f}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>dec</span>" .format(currentPos.transform_to('icrs')))
-        self.galLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.l.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lat</span> <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0.b.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lon</span>".format(currentPos.transform_to('galactic')))
+        self.posLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.az.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>az</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.alt.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>alt</span>".format(currentPos))
+        self.radecLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.ra.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>ra</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.dec.value:.2f}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>dec</span>" .format(currentPos.transform_to('icrs')))
+        self.galLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.l.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lat</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.b.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lon</span>".format(currentPos.transform_to('galactic')))
 
     def tick(self):
-        self.utcLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:16pt; font-weight:600; color:#ffffff;'>{0}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>UTC</span>".format(time.strftime("%H:%M:%S",time.gmtime())))
+        self.utcLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>UTC</span>".format(time.strftime("%H:%M:%S",time.gmtime())))
         #self.sidLabel.setText("Sidereal: {0.sidereal_time()}".format(self.parent().getSRT().drive.current_time_local))
 
 class sourceInfo(QtGui.QWidget):
@@ -123,7 +127,7 @@ class sourceInfo(QtGui.QWidget):
     def __init__(self,parent):
         super(sourceInfo,self).__init__(parent)
         screen = QtGui.QDesktopWidget().screenGeometry()         
-        self.setGeometry(screen.width()-290,275,260,200)
+        self.setGeometry(700-190,105,180,100)
         gb = QtGui.QGroupBox(self)
         #gb.setTitle("Source Information")
         gb.setStyleSheet("QGroupBox {background: #dddddd; margin: 0.5em; } *[class=objectName]{font-size: 24pt;}")
@@ -171,7 +175,7 @@ class commandButtons(QtGui.QWidget):
         super(commandButtons,self).__init__(parent)
         #self.setGeometry(0,0,150,200)
         screen = QtGui.QDesktopWidget().screenGeometry()         
-        self.setGeometry(0,20,screen.width(),60)
+        self.setGeometry(0,20,700,60)
         gb = QtGui.QGroupBox(self)
         #gb.setStyleSheet("QGroupBox {background: black; color: #ffffff; margin-top: 0.5em; margin-bottom: 0.5em;}")        
         gb.setFixedSize(screen.width(),200)
@@ -327,10 +331,12 @@ class commandButtons(QtGui.QWidget):
         if self.trackToggle == TrackToggle.OFF:
             self.trackToggle = TrackToggle.ON
             print("Track Toggle ON")
+            self.parent().srt.drive.track()
             self.parent().srt.setStatus(Status.TRACKING)
         elif self.trackToggle == TrackToggle.ON:
             self.trackToggle = TrackToggle.OFF
             print("Track Toggle OFF")
+            self.parent().srt.drive.track(tracking=False)
             self.parent().srt.setStatus(Status.READY)
 
     def handleCalibrateButton(self):
@@ -357,16 +363,26 @@ def run():
     parser.add_argument('-sim',dest='sim',action='store_true',
                         help='Starts main in simulation mode.')
     args = parser.parse_args()
-    if args.live == True and args.sim == False:
-        print("Live mode enabled.")
-        mode = Mode.LIVE
-    elif args.live == False and args.sim == True:
+    if args.live == False and args.sim == True:
         print("Simulation mode enabled.")
         mode = Mode.SIM
+    else:
+        mode = Mode.LIVE
 
     # parse the _simple_ config file
-    config = ConfigParser.SafeConfigParser()
-    config.read('settings.cfg')
+    #config = ConfigParser.SafeConfigParser()
+    #config.read('settings.cfg')
+
+    home_dir = expanduser('~')
+    config_file_name = home_dir+"/.acreroad_1420/settings.cfg"
+
+    config =  ConfigParser.SafeConfigParser()
+    if isfile(config_file_name):
+        print "loading custom config file"
+        config.read(config_file_name)
+    else:
+        config.read('settings.cfg')
+
     device = config.get('arduino','dev')
     catalogue = config.get('catalogue','catfile')
     calibrationSpeeds = config.get('calibration','speeds')

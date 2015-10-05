@@ -179,7 +179,7 @@ class SRT():
             now = Time(time.time(),format='unix')
             altazframe = AltAz(x*u.deg,y*u.deg,obstime=now,location=acreRoadAstropy)
             skycoordazel = SkyCoord(altazframe)        
-            self.drive.goto(skycoordazel,track=False)
+            self.drive.goto(skycoordazel,track=self.drive.tracking)
 
         
     def slewSuccess(self,targetPos):
@@ -208,11 +208,10 @@ class SRT():
         The SRT will follow the source as it move across the sky.
         """
         if self.mode == Mode.SIM:
-            pos = src.getPos()
-            self.slew(pos)
+            #pos = src.getPos()
+            #self.slew(pos)
             self.status = Status.TRACKING
-        else:
-            # this is where the live code goes.
+        else:            
             pass
         
        

@@ -12,6 +12,11 @@ import time, ephem, datetime
 import numpy as np
 import ConfigParser
 
+
+from os.path import expanduser, isfile, join
+import os.path
+
+
 class RadioSource():
     """
     A container class for a radio source - holds position and other relevant information given by astropy and/or pyephem.
@@ -19,9 +24,15 @@ class RadioSource():
     def __init__(self,name, location=None):
         self.pos = (0,0) # (az,alt)
         self.name = name
-        config = ConfigParser.SafeConfigParser()
-        config.read('settings.cfg')
 
+        config =  ConfigParser.SafeConfigParser()
+        home_dir = expanduser('~')
+        config_file_name = home_dir+"/.acreroad_1420/settings.cfg"
+        if isfile(config_file_name):
+            print "loading custom config file"
+            config.read(config_file_name)
+        else:
+            config.read('settings.cfg')
         if not location:
             observatory = config.get('observatory', 'location').split()
             location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)

@@ -48,7 +48,7 @@ class Skymap(QtGui.QWidget):
         self.galaxy = GalacticPlane(time = self.time, location=self.location)
         self.clickedSource = ""  # name of last clicked source
 
-    def init(self,catalogue):
+    def init_cat(self,catalogue):
         """
         Required to set the initial pointing position, initial status and read in the contents of the source catalogue file.
         """
@@ -131,8 +131,8 @@ class Skymap(QtGui.QWidget):
         elif status == Status.READY:
             self.parent().updateStatusBar("Status: Ready")
         elif status == Status.TRACKING:
-            sourceName = self.getClickedSource().getName()
-            self.parent().updateStatusBar("Status: Tracking " + sourceName)
+            #sourceName = self.getClickedSource().getName()
+            self.parent().updateStatusBar("Status: Tracking")
                             
     def setCurrentPos(self,pos):
         self.srt.setCurrentPos(pos)
@@ -141,7 +141,6 @@ class Skymap(QtGui.QWidget):
         return self.srt.getCurrentPos()
 
     def setTargetPos(self,pos):
-        print type(pos)
         if isinstance(pos, tuple):
             self.targetPos = pos
         else:
@@ -436,7 +435,7 @@ class Skymap(QtGui.QWidget):
         Reads radio sources from the catalogue file, constructs RadioSource class for each source, gets its coordinates and adds it to the radiosources array.
         """
         fname = str(catalogue)
-        fpath = "./"
+        fpath = ""
         f = open(fpath+fname,"r")
         print("Using catalogue file: %s" % f.name)
         print("Loading source information.")
