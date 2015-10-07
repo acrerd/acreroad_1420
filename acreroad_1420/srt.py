@@ -34,8 +34,9 @@ class SRT():
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
-            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds)
+            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=False)
         self.pos = self.azalt()
+        self.getCurrentPos()
         self.location = self.drive.location  #TODO - use this
         self.status = Status.INIT
         self.mode = mode
@@ -75,8 +76,8 @@ class SRT():
         """
         Returns the azimuth and altitude of the SRT by calling the status() method of the drive class.
         """
-        status = self.drive.status()
-        az,alt = status['az'],status['alt']
+        #status = self.drive.status()
+        az,alt = self.drive.az, self.drive.alt
         #print("status " + "%f %f" % (az,alt))
         return (az,alt)
 
@@ -169,8 +170,8 @@ class SRT():
             # This is where live code goes
             # remember self.getCurrentPos() is now in degrees in azalt - NOT pixel coordinates.
             print("Slewing in live mode.")
-            #(x,y) = pos # target - mouse click position in degrees
-            #(cx,cy) = self.pos # current position in degrees.
+            (x,y) = pos # target - mouse click position in degrees
+            (cx,cy) = self.pos # current position in degrees.
             #print("Target Pos: (" + str(x) + "," + str(y) + ")")
             #print("Current Pos: (" + str(cx) + "," + str(cy) + ")")
             # construct a SkyCoord in correct coordinate frame.
@@ -189,7 +190,7 @@ class SRT():
         targetPos = SkyCoord(AltAz(tx*u.deg,ty*u.deg,obstime=self.drive.current_time,location=self.drive.location))
         (cx,cy) = self.pos
         realPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.drive.current_time,location=self.drive.location))
-        d = 3
+        d = 0.5
         
         if targetPos.separation(realPos).value <= d:
             #print("Finished slewing to " + str(self.getCurrentPos()))

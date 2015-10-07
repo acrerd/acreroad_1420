@@ -42,7 +42,7 @@ class Skymap(QtGui.QWidget):
         self.srt = self.parent().getSRT()
 
         #self.currentPos = (0,0) # this should always be in azel degrees
-        self.targetPos = (0,0) # likewise
+        self.targetPos = self.getCurrentPos()#(0,0) # likewise
 
         self.radioSources = [] # the list of radio source from radiosources.cat
         self.galaxy = GalacticPlane(time = self.time, location=self.location)

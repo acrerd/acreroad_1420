@@ -45,8 +45,8 @@ class Drive():
     ra = 0
     dec = 0
 
-    az = 0
-    alt = 0
+    az = 26
+    alt = 3
 
     # Calibration variables
 
@@ -57,6 +57,7 @@ class Drive():
     calibrating = False
     homing = False
     ready = False
+    tracking = False
 
     # String formats
 
@@ -253,6 +254,7 @@ class Drive():
         if string[0]==">":
             if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
+                az, alt = d['az'], d['alt']
                 return d
             if string[1]=='c': # This is the return from a calibration run
                 self.calibrating=False
@@ -296,6 +298,7 @@ class Drive():
 
         #    pass
         #else: print string
+        # self.az, self.el = az, alt
 
     def slewSuccess(self,targetPos):
         """
@@ -307,7 +310,7 @@ class Drive():
             
         cx,cy = self.status()['az'], self.status()['alt']
         realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
-        d = 1
+        d = 1.5
 
         #print targetPos
         #print realPos
@@ -407,7 +410,7 @@ class Drive():
 
         return self._command(command_str)
 
-    def setLocation(self, location=None, dlat=0, dlon=0, azimuth=90.0, altitude=3.0):
+    def setLocation(self, location=None, dlat=0, dlon=0, azimuth=None, altitude=None):
         """
         Sets the location of the telescope.
 
@@ -420,6 +423,9 @@ class Drive():
         altitude : float
            The altitude location in radians of the home position
         """
+
+        azimuth, altitude = self.az_home, self.el_home
+
         if not location:
             # Assume we're at Acre Road, in Glasgow
             location = self.acre_road
@@ -541,7 +547,8 @@ class Drive():
         """
         command_str = "S"
         #self._command(command_str)
-        return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt%90, 'az':self.az%360}
+        #time.sleep(0.1)
+        return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt, 'az':self.az}
 
 
 class ControllerException(Exception):

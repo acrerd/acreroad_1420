@@ -242,6 +242,7 @@ class commandButtons(QtGui.QWidget):
         """
         Returns the SRT to its stow position.
         """
+        #current_az = self.srt.getCurrentPos()[0]
         self.parent().skymap.setTargetPos((0,90))
         self.parent().srt.stow()
 
@@ -392,7 +393,7 @@ def run():
 
     srt = SRT(mode,device,calibrationSpeeds)
     main = mainWindow(srt,catalogue)
-    main.commandButtons.setOffset(homeOffset) # this is not the way to do this.
+    #main.commandButtons.setOffset(homeOffset) # this is not the way to do this.
 
     main.show()
     sys.exit(app.exec_())
