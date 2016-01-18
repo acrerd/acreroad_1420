@@ -166,7 +166,7 @@ class GalacticPlane():
         self.location = location
         self.update()
 
-    def update(self, n=50):
+    def update(self, n=72):
         # We want to calculate the AltAz positions of the galactic plane
         
         c = SkyCoord([i for i in np.linspace(0, 360, n)], [0 for i in np.linspace(-90, 90.0, n)], frame="galactic", unit="deg", obstime = self.time, location=self.location)
@@ -177,6 +177,7 @@ class GalacticPlane():
             if point.alt.value > -10:
                 points.append((point.az.value, point.alt.value))
         
+        print points
         self.points = points
 
                 

@@ -19,6 +19,7 @@ Contents:
    history
 
    drive
+   scheduler
 
 Indices and tables
 ==================

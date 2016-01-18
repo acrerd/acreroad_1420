@@ -393,9 +393,9 @@ class Skymap(QtGui.QWidget):
             pix.append(self.degreeToPixel(point))
             
         for i in xrange(len(pix)-1):
-            j = i + 1
-            if pix[i][0]<pix[j][0]: continue # avoids drawing a line across the screen when the plane crosses the wrap-over.
-            qp.drawLine(pix[i][0], pix[i][1], pix[j][0], pix[j][1])
+            #j = i + 1
+            #if pix[i][0]<pix[j][0]: continue # avoids drawing a line across the screen when the plane crosses the wrap-over.
+            qp.drawEllipse(pix[i][0], pix[i][1],1,1) #, pix[j][0], pix[j][1])
                 
     def degreeToPixelX(self,deg):
         (xs,ys,w,h) = self.sceneSize

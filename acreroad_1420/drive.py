@@ -252,6 +252,7 @@ class Drive():
         
         # A specific output from a function
         if string[0]==">":
+            print string
             if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
                 az, alt = d['az'], d['alt']
@@ -288,7 +289,8 @@ class Drive():
         elif string[0]=="!":
             # This is an error string
             print string[1:]
-        # elif string[0]=="#":
+        elif string[0]=="#":
+            print string
         #     # This is a comment string
         #     if string[1:18] == "FollowingSchedule":
         #         # This is a scheduler comment
@@ -297,7 +299,7 @@ class Drive():
         #             pass
 
         #    pass
-        #else: print string
+        else: print string
         # self.az, self.el = az, alt
 
     def slewSuccess(self,targetPos):

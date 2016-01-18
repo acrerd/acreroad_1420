@@ -170,7 +170,13 @@ class SRT():
             # This is where live code goes
             # remember self.getCurrentPos() is now in degrees in azalt - NOT pixel coordinates.
             print("Slewing in live mode.")
-            (x,y) = pos # target - mouse click position in degrees
+            if isinstance(pos,SkyCoord):
+                now = Time.now()
+                altazframe = AltAz(obstime=now,location=self.drive.location)
+                apos = pos.transform_to(altazframe)
+                x, y = int(apos.az.value), int(apos.alt.value)
+            else:
+                (x,y) = pos # target - mouse click position in degrees
             (cx,cy) = self.pos # current position in degrees.
             #print("Target Pos: (" + str(x) + "," + str(y) + ")")
             #print("Current Pos: (" + str(cx) + "," + str(cy) + ")")

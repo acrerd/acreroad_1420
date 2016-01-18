@@ -7,6 +7,7 @@ Author: Ronnie Frith
 Contact: frith.ronnie@gmail.com
 """
 
+import numpy as np
 import sys, argparse, ConfigParser, time
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
@@ -15,6 +16,7 @@ from radiosource import RadioSource,radec,galactic
 from astropy.time import Time
 from formlayout import fedit
 import astropy
+import astropy.units as u
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
 
 from os.path import expanduser, isfile, join
@@ -112,9 +114,9 @@ class antennaCoordsInfo(QtGui.QWidget):
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
         currentPos = self.parent().getSRT().skycoord()
-        self.posLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.az.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>az</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.alt.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>alt</span>".format(currentPos))
-        self.radecLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.ra.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>ra</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.dec.value:.2f}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>dec</span>" .format(currentPos.transform_to('icrs')))
-        self.galLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.l.value:.2f}<span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lat</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.b.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lon</span>".format(currentPos.transform_to('galactic')))
+        self.posLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.az.value:.2f}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd; left: -5px;'>az</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.alt.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>alt</span>".format(currentPos))
+        self.radecLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.ra.value:.2f}<span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>ra</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.dec.value:.2f}</span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>dec</span>" .format(currentPos.transform_to('icrs')))
+        self.galLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.l.value:.2f}<span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lon</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.b.value:.2f}</span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lat</span>".format(currentPos.transform_to('galactic')))
 
     def tick(self):
         self.utcLabel.setText(" <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>UTC</span>".format(time.strftime("%H:%M:%S",time.gmtime())))
@@ -267,19 +269,23 @@ class commandButtons(QtGui.QWidget):
             #print("Slew toggle ON")
 
     def _parseInput(self, data):
+        print data
         eq, ho, ga = data[0], data[1], data[2]
-        if  (not eq[0] == 'None') and (not eq[1] == 'None'):
+        if  (not eq[0] == '') and (not eq[1] == ''):
             frame = 'ICRS'
             # "Parsing an RA and Dec"
-            c = SkyCoord(ra=eq[0], dec=eq[1], frame='icrs')
+            eq[0], eq[1] = np.float(eq[0]), np.float(eq[1])
+            c = SkyCoord(ra=eq[0]*u.deg, dec=eq[1]*u.deg, frame='icrs')
             
-        elif (not ho[0]=='None') and (not ho[1]=='None'):
+        elif (not ho[0]=='') and (not ho[1]==''):
             # Parsing a horizontal coordinate
-            c = SkyCoord(AltAz(ho[0], ho[1], obstime=self.parent().srt.drive.current_time, location=self.parent().drive.location))
+            ho[0], ho[1] = np.float(ho[0]), np.float(ho[1])
+            c = SkyCoord(AltAz(ho[0]*u.deg, ho[1]*u.deg, obstime=self.parent().srt.drive.current_time, location=self.parent().srt.drive.location))
             
-        elif (not ga[0]=='None') and (not ga[1]=='None'):
+        elif (not ga[0]=='') and (not ga[1]==''):
             # Parsing a galactic coordinate
-            c = SkyCoord(l=ga[0], b=ga[1], frame='galactic')
+            ga[0], ga[1] = np.float(ga[0]), np.float(ga[1])
+            c = SkyCoord(l=ga[0]*u.deg, b=ga[1]*u.deg, frame='galactic')
 
         else:
             # No valid coordinates were passed
@@ -296,7 +302,7 @@ class commandButtons(QtGui.QWidget):
         # Use formlayout to make the form
         equatorialgroup = ( [('Right Ascension', ''), ('Declination', '')], "Equatorial", "Input equatorial coordinates." )
         horizontalgroup = ( [('Azimuth',''), ('Altitude','')], "Horizontal", "Input Horizontal coordinates." )
-        galacticgroup   = ( [('Latitude', ''), ('Longitude', '')], "Galactic", "Input galactic coordinates." )
+        galacticgroup   = ( [('Longitude', ''), ('Latitude', '')], "Galactic", "Input galactic coordinates." )
 
         result = fedit([equatorialgroup, horizontalgroup, galacticgroup])
         print result
@@ -308,6 +314,7 @@ class commandButtons(QtGui.QWidget):
                 #self.parent().srt.slew(self.parent().skymap,(azf,elf))
                 currentPos = self.parent().srt.getCurrentPos()
                 targetPos = skycoord
+                print targetPos
                 state = self.parent().srt.drive.skycoord()
                 if state != Status.SLEWING:
                     if targetPos == currentPos:
