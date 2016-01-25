@@ -28,6 +28,7 @@ class Scheduler():
         
         # We should now run the scheduler in a subthread, so that it's still possible to edit the queue
         # while it's running
+
         self.sched_thread = threading.Thread(target=self._run)
         self.sched_thread.start()
         
@@ -54,15 +55,18 @@ class Scheduler():
                 # If nothing's happening already, but it's time something should be
                 # then start the slew
                 current_slew = True
+                print "Starting to slew"
                 self.drive.goto(schedule[0]['position'])
                 # The next few lines might, conceivably, not be the best way to do this
                 while not self.drive.slewSuccess():
                     continue
+                print "Slew Complete"
                 current_slew = None
                 
             elif datetime.datetime.now > schedule[0]['start'] and not current_slew and not current_job:
                 # The slew has completed (or there wasn't one), but there are no
                 # on-going jobs, so we're free to start the script
+                print "Starting observation"
                 current_job = Popen(schedule[0]['script'])
                 
             elif datetime.datetime.now > schedule[0]['end'] and current_job:
@@ -148,7 +152,8 @@ class Scheduler():
         # Should first check and then parse the various different isntructions,
         # but for now let's just settle with having something which can add a 
         # line to the schedule.
-        
+        print "Event scheduled for {}".format(time)
+
         self.sort
         schedule = self.schedule
         
@@ -177,9 +182,9 @@ class Scheduler():
         # We need to calculate the amount of time the telescope will require to
         # slew to the new location
         if self.drive:
-            speed = float(self.drive.calibration.split()[0])
-            speed = (speed / 3.141)*180
-            slewtime  = drive.skycoord.separation(position).value / speed
+            #speed = 0.007\float(self.drive.calibration.split()[0])
+            #speed = (speed / 3.141)*180
+            slewtime  = 100 #drive.skycoord.separation(position).value / speed
         else: 
             slewtime = 0
         slewtime = datetime.timedelta(seconds=slewtime)
