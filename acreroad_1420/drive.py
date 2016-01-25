@@ -155,6 +155,7 @@ class Drive():
         if not calibration:
             try: calibration = config.get('offsets','calibration')
             except: pass
+        self.calibration = calibration
         self.calibrate(calibration)
 
         # Set the format we want to see status strings produced in; we just want azimuth and altitude.
