@@ -28,7 +28,7 @@ class Scheduler():
         
         # We should now run the scheduler in a subthread, so that it's still possible to edit the queue
         # while it's running
-        self.sched_thread = threading.Thread(target=self._run, daemon=True)
+        self.sched_thread = threading.Thread(target=self._run)
         self.sched_thread.start()
         
     
