@@ -153,7 +153,7 @@ class Drive():
         time.sleep(1)
 
         if not calibration:
-            try: calibration = config.get('offsets','calibration')
+            try: calibration = config.get('calibration', 'speeds')
             except: pass
         self.calibration = calibration
         self.calibrate(calibration)
@@ -253,7 +253,7 @@ class Drive():
         
         # A specific output from a function
         if string[0]==">":
-            print string
+            #print string
             if string[1]=="S": # This is a status string of keyval pairs
                 d = dict(stat_format.findall(string[2:])) #
                 az, alt = d['az'], d['alt']
@@ -262,7 +262,7 @@ class Drive():
                 self.calibrating=False
                 self.config.set('offsets','calibration',string[2:])
                 self.calibration = string[2:]
-                print string
+                #print string
 
         # A status string
         elif string[0]=="s" and len(string)>1:
@@ -286,12 +286,14 @@ class Drive():
             if string[1]=="z" or string[1]=="l":
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
+                #print string, d
                 self._stat_update(self._r2d(self._parse_floats(d[3])), self._r2d(self._parse_floats(d[4])))
         elif string[0]=="!":
             # This is an error string
             print string[1:]
         elif string[0]=="#":
-            print string
+            pass
+            #print string
         #     # This is a comment string
         #     if string[1:18] == "FollowingSchedule":
         #         # This is a scheduler comment
@@ -300,7 +302,7 @@ class Drive():
         #             pass
 
         #    pass
-        else: print string
+        else: pass#print string
         # self.az, self.el = az, alt
 
     def slewSuccess(self,targetPos):
@@ -456,7 +458,6 @@ class Drive():
 
         """
 
-
         if not type(skycoord)==astropy.coordinates.sky_coordinate.SkyCoord:
             raise ValueError("The sky coordinates provided aren't an astropy SkyCoord object!'")
 
@@ -471,12 +472,17 @@ class Drive():
         time = Time.now()
 
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
+
+        print "Going to {0.az} {0.alt}".format(skycoord)
+
         self.target = skycoord
         self.status()
         # construct a command string
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
+        print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
+            print "Command received."
             if track:
                 self.tracking = True
                 command_str = "q"
