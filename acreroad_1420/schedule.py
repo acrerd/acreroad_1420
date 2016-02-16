@@ -9,6 +9,7 @@ import astropy.units as u
 import os
 from subprocess import Popen
 import threading
+import shlex
 
 class Scheduler():
     schedule = []
@@ -27,9 +28,12 @@ class Scheduler():
         # In the initialisation we should probably load at least the drive object!
         self.drive = drive
         
+        self.drive.home()
+
         # We should now run the scheduler in a subthread, so that it's still possible to edit the queue
         # while it's running
-        self.sched_thread = threading.Thread(target=self._run, daemon=True)
+
+        self.sched_thread = threading.Thread(target=self._run)
         self.sched_thread.start()
         
     
@@ -48,25 +52,35 @@ class Scheduler():
         schedule = self.schedule
         
         current_job = None
-        current_slew = None
+        current_slew = False
         while True:
+            if len(schedule)<1:
+                continue
             # Need an infinite loop to continuously check the time
-            if datetime.datetime.now > schedule[0]['slewstart'] and not current_slew and not current_job:
+            #print schedule[0]['slewstart']
+
+            if (datetime.datetime.now() > schedule[0]['start']) & (not current_job):
+                # The slew has completed (or there wasn't one), but there are no
+                # on-going jobs, so we're free to start the script
+                print "Starting observation"
+                print schedule[0]['command']
+                current_job = Popen(schedule[0]['command'])
+                
+
+
+            if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewSuccess(schedule[0]['position'])):
                 # If nothing's happening already, but it's time something should be
                 # then start the slew
                 current_slew = True
-                self.drive.goto(schedule[0]['position'])
+                print "Starting to slew"
+                self.drive.goto(schedule[0]['position'], track=False)
                 # The next few lines might, conceivably, not be the best way to do this
-                while not self.drive.slewSuccess():
+                while not self.drive.slewSuccess(schedule[0]['position']):
                     continue
-                current_slew = None
+                print "Slew Complete"
+                current_slew = False
                 
-            elif datetime.datetime.now > schedule[0]['start'] and not current_slew and not current_job:
-                # The slew has completed (or there wasn't one), but there are no
-                # on-going jobs, so we're free to start the script
-                current_job = Popen(schedule[0]['script'])
-                
-            elif datetime.datetime.now > schedule[0]['end'] and current_job:
+            elif (datetime.datetime.now() > schedule[0]['end']):
                 # It's time to stop the observation, so let's send a SIGTERM
                 current_job.terminate()
                 current_job = None
@@ -87,11 +101,11 @@ class Scheduler():
                                 proc[0](proc[1])
                 
                 # And let's remove the job from the scheduler
-                del(a[0])
+                del(schedule[0])
         
-        
-    def at(self, time, script=None, position=None, until=None, forsec=None, then=None):
-        """Schedule the execution of a script and the pointing of the telescope to a specific location.
+    def at(self, time, script=None, args=None, position=None, until=None, forsec=None, then=None):
+        """
+        Schedule the execution of a script and the pointing of the telescope to a specific location.
         
         Parameters
         ----------
@@ -104,6 +118,9 @@ class Scheduler():
            The filepath of the script which will conduct the 
            observation. This can currently be a Python script, any script with a Shebang
            or a GNU Radio flowchart.
+        
+        args : str
+           The command-line arguments for the script given in `script`.
            
         position : str or Astropy skycoord
            A parsable string containing the sky position at which 
@@ -164,7 +181,8 @@ class Scheduler():
         # Should first check and then parse the various different isntructions,
         # but for now let's just settle with having something which can add a 
         # line to the schedule.
-        
+        print "Event scheduled for {}".format(time)
+
         self.sort
         schedule = self.schedule
         
@@ -206,9 +224,9 @@ class Scheduler():
         # We need to calculate the amount of time the telescope will require to
         # slew to the new location
         if self.drive:
-            speed = float(self.drive.calibration.split()[0])
-            speed = (speed / 3.141)*180
-            slewtime  = drive.skycoord.separation(position).value / speed
+            #speed = 0.007\float(self.drive.calibration.split()[0])
+            #speed = (speed / 3.141)*180
+            slewtime  = 100 #drive.skycoord.separation(position).value / speed
         else: 
             slewtime = 0
         slewtime = datetime.timedelta(seconds=slewtime)
@@ -233,15 +251,21 @@ class Scheduler():
                     return 0
                 
         # Now time to verify the script which has been requested
-        if os.path.isfile(script) and os.access(script, os.X_OK):
+        if os.path.isfile(script) and os.access(script, os.R_OK):
             command = script
             if script[-2:len(script)] == 'py':
                 # This is a python script, so we should preface it with "python"
-                command = "python {}".format(script)
+                if args:
+                    argumentsadd = args
+                else:
+                    argumentsadd = ''
+                command = [script] +argumentsadd
             elif script[-3:len(script)] == 'grc':
                 # This is a GRC file which we'll need to compile to run
                 command = "grcc -e {}".format(script)
             else: command = script
+        else:
+            print "There seems to be something wrong with the script file, or it couldn't be found."
 
         # Then statements: Now time to verify the script which has been
         # requested for the then statements
