@@ -4,6 +4,7 @@ import astropy.units as u
 
 import datetime
 from astropy.coordinates import SkyCoord
+from astropy.coordinates import ICRS, Galactic
 import astropy.units as u
 import os
 from subprocess import Popen
@@ -90,14 +91,14 @@ class Scheduler():
         
         
     def at(self, time, script=None, position=None, until=None, forsec=None, then=None):
-        """
-        Schedule the execution of a script and the pointing of the telescope to a specific location.
+        """Schedule the execution of a script and the pointing of the telescope to a specific location.
         
         Parameters
         ----------
-        time : datetime or astropy Time object
+        time : str, datetime or astropy Time object
            The time at which the observation should start, i.e. 
            the time when the script will be executed.
+           If the time is given as a string, it should be in the format 17 06 2015 13:14.
            
         script : str
            The filepath of the script which will conduct the 
@@ -126,6 +127,20 @@ class Scheduler():
         -------
         int  
            The job number assigned to the observation.
+
+        Examples
+        ---------
+
+        This example schedules an observation, runs a script, and then
+        when it finishes, restows the telescope.
+
+        >>> # Set up the scheduler
+        >>> from acreroad_1420 import schedule, drive
+        >>> import 
+        >>> connection = drive.Drive('/dev/tty.usbserial', 9600, simulate=1)
+        >>> jobs = schedule.Scheduler(drive=connection)
+        >>> # Add a job in galactic coordinates
+        >>> jobs.at('17 06 2015 00:00:00', script='/home/astro/recorder.py', position='g1h12m43.2s +1d12m43s', until='17 06 2016 12:00:00', then=connection.stow)
            
         Notes
         -----
@@ -143,6 +158,7 @@ class Scheduler():
         leeway is required between observations to allow this process to occur. 
         The scheduler attempts to predict this movement time in order to avoid 
         excessive outages during small movements.
+
         """
         
         # Should first check and then parse the various different isntructions,
@@ -156,18 +172,31 @@ class Scheduler():
         # To do, parse things other than skycoords
         if not type(position) is SkyCoord:
             # Need to parse stuff
-            if not position:
+            if type(position) is str:
+                if position[0]=='g':
+                    position = SkyCoord(position[1:], Galactic)
+                elif position[0]=='e':
+                    c = SkyCoord(position[1:], ICRS)
+                else:
+                    c = SkyCoord(position, ICRS)
+        elif not position:
                 # For a None position, assume the zenith
                 pass
-        
-        
-        start = time
+
+        # Parse the start time if it's a string
+        if isinstance(time, str):
+            start = datetime.strptime(time, '%d %m %Y %H:%M:%S')
+        else:
+            start = time
         
         if forsec:
             forsec = forsec
             end = time+datetime.timedelta(seconds=forsec)
         elif until:
-            end = until
+            if isinstance(until, str):
+                end = datetime.strptime(until, '%d %m %Y %H:%M:%S')
+            else:
+                end = until
             
         # We can't schedule events in the past:
         if (end - datetime.datetime.now()).total_seconds() < 0:
