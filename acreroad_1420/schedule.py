@@ -191,10 +191,13 @@ class Scheduler():
             if type(position) is str:
                 if position[0]=='g':
                     position = SkyCoord(position[1:], Galactic)
+                elif position[0]=='h':
+                    position = SkyCoord(position[1:], frame = AltAz(obstime=start_time,location=self.schedule.drive.location))
+                
                 elif position[0]=='e':
-                    c = SkyCoord(position[1:], ICRS)
+                    c = SkyCoord(position[1:], ICRS,)
                 else:
-                    c = SkyCoord(position, ICRS)
+                    c = SkyCoord(position, ICRS,)
         elif not position:
                 # For a None position, assume the zenith
                 pass
