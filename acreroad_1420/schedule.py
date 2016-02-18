@@ -183,24 +183,6 @@ class Scheduler():
 
         self.sort
         schedule = self.schedule
-        
-        # Parse the position
-        # To do, parse things other than skycoords
-        if not type(position) is SkyCoord:
-            # Need to parse stuff
-            if type(position) is str:
-                if position[0]=='g':
-                    position = SkyCoord(position[1:], Galactic, unit=(u.deg, u.deg))
-                elif position[0]=='h':
-                    position = SkyCoord(position[1:], frame = AltAz(obstime=start_time,location=self.schedule.drive.location), unit=(u.deg, u.deg))
-                
-                elif position[0]=='e':
-                    c = SkyCoord(position[1:], ICRS, unit=(u.deg, u.deg))
-                else:
-                    c = SkyCoord(position, ICRS, unit=(u.deg, u.deg))
-        elif not position:
-                # For a None position, assume the zenith
-                pass
 
         # Parse the start time if it's a string
         if isinstance(time, str):
@@ -216,7 +198,28 @@ class Scheduler():
                 end = datetime.strptime(until, '%d %m %Y %H:%M:%S')
             else:
                 end = until
-            
+
+
+
+        # Parse the position
+        # To do, parse things other than skycoords
+        if not type(position) is SkyCoord:
+            # Need to parse stuff
+            if type(position) is str:
+                if position[0]=='g':
+                    position = SkyCoord(position[1:], Galactic, unit=(u.deg, u.deg))
+                elif position[0]=='h':
+                    position = SkyCoord(position[1:], frame = AltAz(obstime=start,location=self.schedule.drive.location), unit=(u.deg, u.deg))
+                
+                elif position[0]=='e':
+                    c = SkyCoord(position[1:], ICRS, unit=(u.deg, u.deg))
+                else:
+                    c = SkyCoord(position, ICRS, unit=(u.deg, u.deg))
+        elif not position:
+                # For a None position, assume the zenith
+                pass
+
+                
         # We can't schedule events in the past:
         if (end - datetime.datetime.now()).total_seconds() < 0:
             print "End time of job is in the past, the job has been rejected."
