@@ -59,15 +59,13 @@ class Scheduler():
             # Need an infinite loop to continuously check the time
             #print schedule[0]['slewstart']
 
-            if (datetime.datetime.now() > schedule[0]['start']) & (not current_job):
+            if (datetime.datetime.now() > schedule[0]['start']) & (not current_job) & (not current_slew):
                 # The slew has completed (or there wasn't one), but there are no
                 # on-going jobs, so we're free to start the script
                 print "Starting observation"
                 print schedule[0]['command']
                 current_job = Popen(schedule[0]['command'])
                 
-
-
             if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewSuccess(schedule[0]['position'])):
                 # If nothing's happening already, but it's time something should be
                 # then start the slew
