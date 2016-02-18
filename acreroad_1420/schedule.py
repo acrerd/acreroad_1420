@@ -4,7 +4,7 @@ import astropy.units as u
 
 import datetime
 from astropy.coordinates import SkyCoord
-from astropy.coordinates import ICRS, Galactic
+from astropy.coordinates import ICRS, Galactic, AltAz
 import astropy.units as u
 import os
 from subprocess import Popen
