@@ -187,7 +187,7 @@ class Scheduler():
 
         # Parse the start time if it's a string
         if isinstance(time, str):
-            start = date.strptime(time, '%d %m %Y %H:%M:%S')
+            start = datetime.datetime.strptime(time, '%d %m %Y %H:%M:%S')
         else:
             start = time
         
@@ -196,7 +196,7 @@ class Scheduler():
             end = time+datetime.timedelta(seconds=forsec)
         elif until:
             if isinstance(until, str):
-                end = date.strptime(until, '%d %m %Y %H:%M:%S')
+                end = datetime.datetime.strptime(until, '%d %m %Y %H:%M:%S')
             else:
                 end = until
 
