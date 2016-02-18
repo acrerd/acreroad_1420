@@ -209,7 +209,7 @@ class Scheduler():
                 if position[0]=='g':
                     position = SkyCoord(position[1:], Galactic, unit=(u.deg, u.deg))
                 elif position[0]=='h':
-                    position = SkyCoord(position[1:], frame = AltAz(obstime=start,location=self.schedule.drive.location), unit=(u.deg, u.deg))
+                    position = SkyCoord(position[1:], frame = AltAz(obstime=start,location=self.drive.location), unit=(u.deg, u.deg))
                 
                 elif position[0]=='e':
                     c = SkyCoord(position[1:], ICRS, unit=(u.deg, u.deg))
