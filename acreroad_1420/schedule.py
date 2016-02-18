@@ -3,6 +3,7 @@ import astropy.units as u
 
 
 import datetime
+from datetime import date
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import ICRS, Galactic, AltAz
 import astropy.units as u
@@ -186,7 +187,7 @@ class Scheduler():
 
         # Parse the start time if it's a string
         if isinstance(time, str):
-            start = datetime.strptime(time, '%d %m %Y %H:%M:%S')
+            start = date.strptime(time, '%d %m %Y %H:%M:%S')
         else:
             start = time
         
@@ -195,7 +196,7 @@ class Scheduler():
             end = time+datetime.timedelta(seconds=forsec)
         elif until:
             if isinstance(until, str):
-                end = datetime.strptime(until, '%d %m %Y %H:%M:%S')
+                end = date.strptime(until, '%d %m %Y %H:%M:%S')
             else:
                 end = until
 
