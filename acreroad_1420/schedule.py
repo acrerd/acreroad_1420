@@ -190,14 +190,14 @@ class Scheduler():
             # Need to parse stuff
             if type(position) is str:
                 if position[0]=='g':
-                    position = SkyCoord(position[1:], Galactic)
+                    position = SkyCoord(position[1:], Galactic, unit=(u.deg, u.deg))
                 elif position[0]=='h':
-                    position = SkyCoord(position[1:], frame = AltAz(obstime=start_time,location=self.schedule.drive.location))
+                    position = SkyCoord(position[1:], frame = AltAz(obstime=start_time,location=self.schedule.drive.location), unit=(u.deg, u.deg))
                 
                 elif position[0]=='e':
-                    c = SkyCoord(position[1:], ICRS,)
+                    c = SkyCoord(position[1:], ICRS, unit=(u.deg, u.deg))
                 else:
-                    c = SkyCoord(position, ICRS,)
+                    c = SkyCoord(position, ICRS, unit=(u.deg, u.deg))
         elif not position:
                 # For a None position, assume the zenith
                 pass
