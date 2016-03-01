@@ -6,11 +6,15 @@ import datetime
 from datetime import date
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import ICRS, Galactic, AltAz
+from astropy.time import Time
 import astropy.units as u
 import os
 from subprocess import Popen
 import threading
 import shlex
+
+import warnings
+warnings.filterwarnings("ignore")
 
 class Scheduler():
     schedule = []
@@ -49,14 +53,26 @@ class Scheduler():
         """
         # Make sure that the schedule is correctly sorted, so the first entry will be the 
         # next scheduled observation
+
+        print "Scheduler running..."
+
         self.sort()
-        schedule = self.schedule
         
+        
+        #print "There are {} jobs in the queue.".format(len(schedule))
+
         current_job = None
         current_slew = False
         while True:
+            schedule = self.schedule
+            self.running = True
             if len(schedule)<1:
                 continue
+            #else:
+            #    print "There are no jobs in the queue, so the scheduler is stopping."
+                #self.running = False
+                #self.sched_thread.stop()
+            #    break
             # Need an infinite loop to continuously check the time
             #print schedule[0]['slewstart']
 
@@ -64,14 +80,14 @@ class Scheduler():
                 # The slew has completed (or there wasn't one), but there are no
                 # on-going jobs, so we're free to start the script
                 print "Starting observation"
-                print schedule[0]['command']
                 current_job = Popen(schedule[0]['command'])
+                print "There are {} jobs in the queue".format(len(schedule))
                 
             if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewSuccess(schedule[0]['position'])):
                 # If nothing's happening already, but it's time something should be
                 # then start the slew
                 current_slew = True
-                print "Starting to slew"
+                print "\t Starting to slew"
                 self.drive.goto(schedule[0]['position'], track=False)
                 # The next few lines might, conceivably, not be the best way to do this
                 while not self.drive.slewSuccess(schedule[0]['position']):
@@ -83,6 +99,7 @@ class Scheduler():
                 # It's time to stop the observation, so let's send a SIGTERM
                 current_job.terminate()
                 current_job = None
+                print "Job ended"
 
                 # if a 'then' directive has been added this should now be acted upon.
                 if schedule[0]['then']:
@@ -100,7 +117,12 @@ class Scheduler():
                                 proc[0](proc[1])
                 
                 # And let's remove the job from the scheduler
-                del(schedule[0])
+                # but only remove it if the start date is in the past, to avoid removing future jobs!
+                print "There are {} jobs in the queue".format(len(schedule))
+                if schedule[0]['start'] < datetime.datetime.now(): 
+                    print "Removing job which started at {}".format(schedule[0]['start'])
+                    self.schedule.pop(0)
+                print "There are {} jobs in the queue".format(len(schedule))
         
     def at(self, time, script=None, args=None, position=None, until=None, forsec=None, then=None):
         """
@@ -180,7 +202,7 @@ class Scheduler():
         # Should first check and then parse the various different isntructions,
         # but for now let's just settle with having something which can add a 
         # line to the schedule.
-        print "Event scheduled for {}".format(time)
+        
 
         self.sort
         schedule = self.schedule
@@ -193,7 +215,7 @@ class Scheduler():
         
         if forsec:
             forsec = forsec
-            end = time+datetime.timedelta(seconds=forsec)
+            end = start+datetime.timedelta(seconds=forsec)
         elif until:
             if isinstance(until, str):
                 end = datetime.datetime.strptime(until, '%d %m %Y %H:%M:%S')
@@ -263,8 +285,15 @@ class Scheduler():
                 if args:
                     argumentsadd = args
                 else:
-                    argumentsadd = ''
-                command = [script] +argumentsadd
+                    argumentsadd = []
+                    
+                start_isot = Time(start, format="datetime").isot
+                outfile_pos = position.transform_to(ICRS)
+                outfile = "/home/astro/srt2016/ra{:.2f}dec{:.2f}time{}.dat".format(outfile_pos.ra.value, outfile_pos.dec.value, start_isot)
+
+                outputarg = ['-o', outfile]
+
+                command = [script] +outputarg +argumentsadd
             elif script[-3:len(script)] == 'grc':
                 # This is a GRC file which we'll need to compile to run
                 command = "grcc -e {}".format(script)
@@ -295,7 +324,12 @@ class Scheduler():
         idn = self.next_id
         self.next_id += 1
         # There's no apparent overlap, so it's safe to add this job to the schedule.
-        schedule.append({'id': idn, 'command':command, 'slewstart': slewstart, 'start':start, 'end':end, 'position':position, 'script': script, 'then': thencommands})
+        self.schedule.append({'id': idn, 'command':command, 'slewstart': slewstart, 'start':start, 'end':end, 'position':position, 'script': script, 'then': thencommands})
         self.sort()
+        # If the scheduler isn't running then start it
+        #if not self.running: self._run()
+        # Print the confirmation that the job has been added
+        print "Event scheduled for {}".format(time)
     def sort(self):
         self.schedule = sorted(self.schedule, key=lambda k: k['start']) 
+        print self.schedule
