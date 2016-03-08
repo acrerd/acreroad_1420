@@ -16,6 +16,11 @@ The easiest way to understand the functionality of the scheduler is through some
 Drift Scan
 ----------
 
+This code sets up a drift scan. The telescope is positioned pointing
+due South (at an azimuth of 180 degrees), and at a fixed altitude,
+with the tracking turned off. As the sky moves overhead the pointing
+right ascension changes, but the declination remains fixed.
+
 .. code-block:: python
    
 		# Set up the scheduler
