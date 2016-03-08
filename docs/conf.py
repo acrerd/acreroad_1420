@@ -57,7 +57,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Acre Road 1420 MHz Telescope'
+project = u'acreroad_1420'
 copyright = u'2015, Daniel Williams'
 
 # The version info for the project you're documenting, acts as replacement
