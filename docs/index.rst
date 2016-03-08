@@ -25,6 +25,8 @@ Contents:
    readme
    installation
    usage
+   scheduler
+	      
    contributing
    authors
    history
