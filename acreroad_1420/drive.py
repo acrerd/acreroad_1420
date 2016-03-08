@@ -314,7 +314,10 @@ class Drive():
             targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
             
         cx,cy = self.status()['az'], self.status()['alt']
-        realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
+        try:
+            realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
+        except:
+            print cx, cy
         d = 1.5
 
         #print targetPos
