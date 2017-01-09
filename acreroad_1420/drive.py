@@ -38,6 +38,17 @@ import os.path
 
 class Drive():
 
+    # The vocabulary from the qt package.
+    # This should probably be moved to a file in its own right to help
+    # make the drive more generic
+    vocabulary = {
+        "DRIVE_UP"  : "gU",
+        "DRIVE_DOWN": "gD",
+        "DRIVE_EAST": "gE",
+        "DRIVE_WEST": "gW",
+        "DRIVE_HOME": "gH",
+        }
+    
     sim = 0
     acre_road = EarthLocation(lat=55.9024278*u.deg, lon=-4.307582*u.deg, height=61*u.m)
 
@@ -372,7 +383,30 @@ class Drive():
         Stops the telescope drives.
         """
         return self._command("x")
-            
+
+    def move(self, direction):
+        """
+        Start moving the telescope in a specified direction.
+
+        Parameters
+        ----------
+        direction : {left, right, up, down}
+           Direction to move the telescope.
+        """
+        directions = ["west", "east", "up", "down"]
+        if direction not in directions:
+            print("Unknown direction provided.")
+            return None
+        else:
+            commands = {"east": "DRIVE_WEST", "west": "DRIVE_WEST",
+                        "up" : "DRIVE_UP", "down": "DRIVE_DOWN"}
+            # Find the command which corresponds to the correct
+            # vocabulary command
+            command = commands[direction]
+            if command in self.vocabulary:
+                print(self.vocabulary[command])
+                return self._command(self.vocabulary[command])
+    
     def set_status_cadence(self, interval):
         """
         Sets the cadence of the status messages from the controller.
