@@ -47,8 +47,12 @@ class Drive():
         "DRIVE_EAST": "gE",
         "DRIVE_WEST": "gW",
         "DRIVE_HOME": "gH",
+        "SET_SPEED" : "ta {}",
+        "CALIBRATE" : "c {} {}",
         }
     
+    MAX_SPEED = 0.5
+
     sim = 0
     acre_road = EarthLocation(lat=55.9024278*u.deg, lon=-4.307582*u.deg, height=61*u.m)
 
@@ -75,7 +79,8 @@ class Drive():
     com_format = re.compile("[A-Za-z]{1,2} ?([-+]?[0-9]{0,4}\.[0-9]{0,8} ?){0,6}") # general command string format
     cal_format = re.compile("[0-9]{3} [0-9]{3}") # calibration string format
     
-    stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
+    #stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
+    stat_format = re.compile(r"(?=\s+)([\w_]+)\s*=\s*([\d_:\.T]+)")
     
     def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None, persist=True):
         """
@@ -134,6 +139,12 @@ class Drive():
         homealtaz = config.get('offsets', 'home').split()
         self.az_home, self.el_home = float(homealtaz[0]), float(homealtaz[1])
 
+        # Add a dirty hack to easily calibrate the telescope in software
+            
+        absaltaz = config.get('offsets', 'absolute').split()
+        self.az_abs, self.el_abs = float(absaltaz[0]), float(absaltaz[1])
+
+
         #
         # Pull the location of the telesope in from the configuration file if it isn't given as an argument to the
         # class initiator.
@@ -164,8 +175,12 @@ class Drive():
         time.sleep(1)
 
         if not calibration:
-            try: calibration = config.get('calibration', 'speeds')
+            try: 
+                calibration = config.get('calibration', 'speeds')
             except: pass
+
+        self.span = float(config.get("offsets", "span"))
+
         self.calibration = calibration
         self.calibrate(calibration)
 
@@ -259,6 +274,7 @@ class Drive():
             self.homing = False
             
     def parse(self, string):
+        print string
         # Ignore empty lines
         if len(string)<1: return 0
         
@@ -266,9 +282,17 @@ class Drive():
         if string[0]==">":
             #print string
             if string[1]=="S": # This is a status string of keyval pairs
-                d = dict(stat_format.findall(string[2:])) #
-                az, alt = d['az'], d['alt']
-                return d
+                # This currently seems to be broken, so pass
+                pass
+                # print("string", string[2:])
+                # d = string[2:].split()
+                # out = {}
+                # for field in d:
+                #     key, val = field.split("=")
+                #     out[key] = val
+                # print("d", out)
+                # az, alt = out['Taz'], out['Talt']
+                # return out
             if string[1]=='c': # This is the return from a calibration run
                 self.calibrating=False
                 self.config.set('offsets','calibration',string[2:])
@@ -281,7 +305,7 @@ class Drive():
             d = string[2:].split(",")
             try:
                 try:
-                    az, alt = self._parse_floats(d[0]), self._parse_floats(d[1])
+                    az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
                     az = str(np.pi - az)
                     self._stat_update( self._r2d(az), self._r2d(alt) )
                 except:
@@ -293,7 +317,7 @@ class Drive():
                 # process.
                 pass
             return d
-        elif string[0]=="a":
+        elif string[0]=="a":            
             if string[1]=="z" or string[1]=="l":
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
@@ -314,7 +338,7 @@ class Drive():
 
         #    pass
         else: pass#print string
-        # self.az, self.el = az, alt
+        
 
     def slewSuccess(self,targetPos):
         """
@@ -384,6 +408,25 @@ class Drive():
         """
         return self._command("x")
 
+    def set_speed(self, speed):
+        """
+        Set the speed of the drive in radians / second.
+
+        Parameters
+        ----------
+        speed : float [rad/sec]
+           The physical angular speed which the motor should attempt to
+           drive at.
+        """
+        command = self.vocabulary['SET_SPEED']
+        if speed > self.MAX_SPEED: 
+            print("{} is greater than the maximum speed ({})".format(speed, self.MAX_SPEED))
+            return
+        else:
+            # The command can have the speed added using a format command
+            return self._command(command.format(speed))
+        
+
     def move(self, direction):
         """
         Start moving the telescope in a specified direction.
@@ -398,7 +441,7 @@ class Drive():
             print("Unknown direction provided.")
             return None
         else:
-            commands = {"east": "DRIVE_WEST", "west": "DRIVE_WEST",
+            commands = {"east": "DRIVE_EAST", "west": "DRIVE_WEST",
                         "up" : "DRIVE_UP", "down": "DRIVE_DOWN"}
             # Find the command which corresponds to the correct
             # vocabulary command
@@ -407,6 +450,34 @@ class Drive():
                 print(self.vocabulary[command])
                 return self._command(self.vocabulary[command])
     
+    def change_offset(self, direction, amount):
+        """
+        Change the software-defined offsets for this script (and not for qt).
+
+        Parameters
+        ----------
+        direction : str {"azimuth", "altitude"}
+           The axis along which the correction must be made.
+        amount : float
+           The change of correction to be applied, in degrees.
+        """
+        directions = ['azimuth', 'altitude']
+        if direction not in directions:
+            print("I do not understand the direction {}".format(direction))
+        else:
+            if direction == directions[0]: # azimuth
+                self.az_abs += amount
+            elif direction == directions[1]: #altitude
+                self.el_abs += amount
+        # Set the new calibration on the motor
+        print("New calibration is {}az {}alt".format(self.az_home, self.el_home))
+        # Write the new calibration to the config file
+        self.config.set('offsets','absolute',"{} {}".format(self.az_home, self.el_home))
+        return
+        #return self._command(self.vocabulary['CALIBRATE'].format(self.az_home, self.el_home))
+        
+        
+
     def set_status_cadence(self, interval):
         """
         Sets the cadence of the status messages from the controller.
@@ -472,18 +543,18 @@ class Drive():
             # Assume we're at Acre Road, in Glasgow
             location = self.acre_road
 
-        latitude  = location.latitude.value * (180/np.pi)
-        longitude = location.longitude.value * (180/np.pi)
+        latitude  = location.latitude.value #* (180/np.pi)
+        longitude = location.longitude.value #* (180/np.pi)
 
         azimuth = azimuth*(np.pi/180)
         altitude = altitude*(np.pi/180)
 
         # Construct the command
-        command_str = "O {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}".format(latitude, longitude, dlat, dlon, azimuth, altitude)
+        command_str = "O {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f} {:.4f}".format(latitude, longitude, dlat, dlon, azimuth, altitude, self.span)
         
         return self._command(command_str)
 
-    def goto(self, skycoord, track=True):
+    def goto(self, skycoord, track=False):
         """
         Moves the telescope to point at a given sky location, and then commands the drive to track the point.
 
@@ -532,18 +603,28 @@ class Drive():
             raise ControllerException("The telescope has failed to slew to the requested location")
 
     def track(self, tracking=True):
+        """
+        Make the drive track an object.
+        """
+        
+        #if tracking:
+        #     self.tracking = True
+        #     command_str = "q"
+        #     self._command(command_str)
+        #     command_str = "ts"
+        #     self._command(command_str)
+        # else: 
+        #     self.tracking=False
+        #     command_str = "q"
+        #     self._command(command_str)
+        #     command_str = "ts 0.0"
+        #     self._command(command_str)
+
+        # current position
+        alt, az = self.el, self.az
         if tracking:
-            self.tracking = True
-            command_str = "q"
-            self._command(command_str)
-            command_str = "ts"
-            self._command(command_str)
-        else: 
-            self.tracking=False
-            command_str = "q"
-            self._command(command_str)
-            command_str = "ts 0.0"
-            self._command(command_str)
+            #difference_alt = 
+            pass
 
     def home(self):
         """
@@ -592,7 +673,7 @@ class Drive():
         
         """
         command_str = "S"
-        #self._command(command_str)
+        self._command(command_str)
         #time.sleep(0.1)
         return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt, 'az':self.az}
 

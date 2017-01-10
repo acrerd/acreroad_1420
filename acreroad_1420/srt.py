@@ -34,7 +34,7 @@ class SRT():
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
-            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=False)
+            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=True)
         self.pos = self.azalt()
         self.getCurrentPos()
         self.location = self.drive.location  #TODO - use this
