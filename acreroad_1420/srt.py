@@ -30,7 +30,7 @@ class Mode:
 
 class SRT():   
     def __init__(self,mode,device,calibrationSpeeds):
-        baud = 9600
+        baud = 115200
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
