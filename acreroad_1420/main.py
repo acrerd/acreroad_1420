@@ -35,6 +35,9 @@ class mainWindow(QtGui.QMainWindow):
     """
     Container class for the whole main window.  Container classes for other widgets such as buttons and labels are constructed here.
     """
+
+    cursorkeys = [QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]
+    
     def __init__(self, srt, catalogue, parent=None):
         super(mainWindow,self).__init__(parent=parent)
         screen = QtGui.QDesktopWidget().screenGeometry()        
@@ -58,6 +61,34 @@ class mainWindow(QtGui.QMainWindow):
         self.sourceTimer.timeout.connect(self.skymap.fetchRadioSourceCoordinates)
         self.sourceTimer.start(60000)
 
+
+    def keyPressEvent(self, event):
+        
+        if event.isAutoRepeat():
+            return
+
+        key = event.key()
+        print(key)
+        
+        if key == QtCore.Qt.Key_Left:
+            self.srt.drive.move('west')
+        if key == QtCore.Qt.Key_Up:
+            self.srt.drive.move('up')
+        if key == QtCore.Qt.Key_Down:
+            self.srt.drive.move('down')
+        if key == QtCore.Qt.Key_Right:
+            self.srt.drive.move('east')
+        event.accept()
+
+    def keyReleaseEvent(self, event):
+        if event.isAutoRepeat(): return
+        pressed = event.key()
+        if pressed in self.cursorkeys:
+            # Stop the motors as soon as the key is released
+            print("Panic")
+            self.srt.drive.panic()
+        event.accept()
+        
         
     def updateStatusBar(self,status):
         """
