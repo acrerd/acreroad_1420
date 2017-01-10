@@ -100,6 +100,9 @@ class Skymap(QtGui.QWidget):
         if self.srt.getStatus() == Status.SLEWING:
             if self.srt.drive.slewSuccess(targetPos) == True:
                 self.srt.setStatus(Status.READY)
+            else: 
+                # This is a kludgy fix to remove make the need to reset the software 
+                self.srt.setStatus(Status.READY)
 
         self.parent().antennaCoordsInfo.updateCoords()
         self.parent().antennaCoordsInfo.tick()

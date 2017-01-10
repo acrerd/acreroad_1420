@@ -30,11 +30,11 @@ class Mode:
 
 class SRT():   
     def __init__(self,mode,device,calibrationSpeeds):
-        baud = 9600
+        baud = 115200
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
-            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=False)
+            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=True)
         self.pos = self.azalt()
         self.getCurrentPos()
         self.location = self.drive.location  #TODO - use this

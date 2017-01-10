@@ -35,6 +35,10 @@ class mainWindow(QtGui.QMainWindow):
     """
     Container class for the whole main window.  Container classes for other widgets such as buttons and labels are constructed here.
     """
+    OFFSET_CHANGE = 1.1
+
+    cursorkeys = [QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]
+    
     def __init__(self, srt, catalogue, parent=None):
         super(mainWindow,self).__init__(parent=parent)
         screen = QtGui.QDesktopWidget().screenGeometry()        
@@ -46,6 +50,7 @@ class mainWindow(QtGui.QMainWindow):
         self.skymap = Skymap(self, time=srt.drive.current_time, location=srt.drive.location)
         self.skymap.init_cat(catalogue) # this must be called to get the current position of srt to diplay it on the skymap.
 
+        #self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.commandButtons = commandButtons(self)
         self.antennaCoordsInfo = antennaCoordsInfo(self)
         self.sourceInfo = sourceInfo(self)
@@ -58,6 +63,43 @@ class mainWindow(QtGui.QMainWindow):
         self.sourceTimer.timeout.connect(self.skymap.fetchRadioSourceCoordinates)
         self.sourceTimer.start(60000)
 
+
+    def keyPressEvent(self, event):
+        print("Key press")
+        if event.isAutoRepeat():
+            return
+
+        key = event.key()
+        print(key)
+        
+        if key == QtCore.Qt.Key_Left:
+            self.srt.drive.move('west')
+            self.updateStatusBar("Driving West")
+        if key == QtCore.Qt.Key_Up:
+            self.srt.drive.move('up')
+        if key == QtCore.Qt.Key_Down:
+            self.srt.drive.move('down')
+        if key == QtCore.Qt.Key_Right:
+            self.srt.drive.move('east')
+        if key == QtCore.Qt.Key_A:
+            self.srt.drive.change_offset("azimuth", -self.OFFSET_CHANGE)
+            self.updateStatusBar("Azimuth nudged to {}".format(self.srt.drive.az_abs))
+        if key == QtCore.Qt.Key_S:
+            self.srt.drive.change_offset("altitude", -self.OFFSET_CHANGE)
+        if key == QtCore.Qt.Key_D:
+            self.srt.drive.change_offset("azimuth", self.OFFSET_CHANGE)
+        if key == QtCore.Qt.Key_W:
+            self.srt.drive.change_offset("altitude", self.OFFSET_CHANGE)
+        event.accept()
+
+    def keyReleaseEvent(self, event):
+        if event.isAutoRepeat(): return
+        pressed = event.key()
+        if pressed in self.cursorkeys:
+            # Stop the motors as soon as the key is released
+            self.srt.drive.panic()
+        event.accept()
+        
         
     def updateStatusBar(self,status):
         """
