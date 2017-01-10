@@ -289,6 +289,7 @@ class commandButtons(QtGui.QWidget):
         #current_az = self.srt.getCurrentPos()[0]
         self.parent().skymap.setTargetPos((0,90))
         self.parent().srt.stow()
+        self.parent().setFocus()
 
     def handleHomeButton(self):
         """
@@ -298,6 +299,7 @@ class commandButtons(QtGui.QWidget):
         #self.parent().skymap.setTargetPos((float(homeOffset[0]),float(homeOffset[1])))
         self.parent().skymap.setTargetPos((self.parent().srt.drive.az_home,self.parent().srt.drive.el_home))
         self.parent().srt.home()
+        self.parent().setFocus()
 
     def handleSlewButton(self):
         """
@@ -309,6 +311,7 @@ class commandButtons(QtGui.QWidget):
         elif self.slewToggle == SlewToggle.OFF:
             self.slewToggle = SlewToggle.ON
             #print("Slew toggle ON")
+        self.parent().setFocus()
 
     def _parseInput(self, data):
         print data
@@ -373,6 +376,7 @@ class commandButtons(QtGui.QWidget):
                         #self.parent().updateStatusBar()
                 else:
                     print("Already Slewing.  Please wait until finished.")
+        self.parent().setFocus()
                 
     def handleTrackButton(self):
         """
@@ -388,9 +392,11 @@ class commandButtons(QtGui.QWidget):
             print("Track Toggle OFF")
             self.parent().srt.drive.track(tracking=False)
             self.parent().srt.setStatus(Status.READY)
+        self.parent().setFocus()
 
     def handleCalibrateButton(self):
         self.parent().srt.calibrate()
+        self.parent().setFocus()
 
     def getSlewToggle(self):
         return self.slewToggle
