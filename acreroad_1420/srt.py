@@ -30,7 +30,7 @@ class Mode:
 
 class SRT():   
     def __init__(self,mode,device,calibrationSpeeds):
-        baud = 115200
+        baud = 19200 #115200
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
@@ -64,11 +64,12 @@ class SRT():
         -------
         SkyCoord : An astropy SkyCoord.
         """
-        position = self.getCurrentPos()
+        position = self.drive.status()#self.getCurrentPos()
         observatory = self.drive.location
         time = self.drive.current_time
-
-        coord = SkyCoord(AltAz(az = position[0]*u.degree, alt = position[1]*u.degree, obstime = time, location = observatory))
+        alt = position['alt']
+        if alt > 90 : alt = (360-alt)
+        coord = SkyCoord(AltAz(az = position['az']*u.degree, alt = alt *u.degree, obstime = time, location = observatory))
         return coord
         
         
@@ -129,7 +130,7 @@ class SRT():
         """
         Slews to position pos in degrees.
         """
-        delay = 0.05
+        delay = 0.1
         self.status = Status.SLEWING
             
         if self.mode == Mode.SIM:
@@ -199,7 +200,7 @@ class SRT():
         d = 0.5
         
         if targetPos.separation(realPos).value <= d:
-            #print("Finished slewing to " + str(self.getCurrentPos()))
+            print("Finished slewing to " + str(self.getCurrentPos()))
             return True
         else:
             return False

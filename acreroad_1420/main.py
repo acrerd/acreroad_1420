@@ -64,41 +64,41 @@ class mainWindow(QtGui.QMainWindow):
         self.sourceTimer.start(60000)
 
 
-    def keyPressEvent(self, event):
-        print("Key press")
-        if event.isAutoRepeat():
-            return
+    # def keyPressEvent(self, event):
+    #     print("Key press")
+    #     if event.isAutoRepeat():
+    #         return
 
-        key = event.key()
-        print(key)
+    #     key = event.key()
+    #     print(key)
         
-        if key == QtCore.Qt.Key_Left:
-            self.srt.drive.move('west')
-            self.updateStatusBar("Driving West")
-        if key == QtCore.Qt.Key_Up:
-            self.srt.drive.move('up')
-        if key == QtCore.Qt.Key_Down:
-            self.srt.drive.move('down')
-        if key == QtCore.Qt.Key_Right:
-            self.srt.drive.move('east')
-        if key == QtCore.Qt.Key_A:
-            self.srt.drive.change_offset("azimuth", -self.OFFSET_CHANGE)
-            self.updateStatusBar("Azimuth nudged to {}".format(self.srt.drive.az_abs))
-        if key == QtCore.Qt.Key_S:
-            self.srt.drive.change_offset("altitude", -self.OFFSET_CHANGE)
-        if key == QtCore.Qt.Key_D:
-            self.srt.drive.change_offset("azimuth", self.OFFSET_CHANGE)
-        if key == QtCore.Qt.Key_W:
-            self.srt.drive.change_offset("altitude", self.OFFSET_CHANGE)
-        event.accept()
+    #     if key == QtCore.Qt.Key_Left:
+    #         self.srt.drive.move('west')
+    #         self.updateStatusBar("Driving West")
+    #     if key == QtCore.Qt.Key_Up:
+    #         self.srt.drive.move('up')
+    #     if key == QtCore.Qt.Key_Down:
+    #         self.srt.drive.move('down')
+    #     if key == QtCore.Qt.Key_Right:
+    #         self.srt.drive.move('east')
+    #     if key == QtCore.Qt.Key_A:
+    #         self.srt.drive.change_offset("azimuth", -self.OFFSET_CHANGE)
+    #         self.updateStatusBar("Azimuth nudged to {}".format(self.srt.drive.az_abs))
+    #     if key == QtCore.Qt.Key_S:
+    #         self.srt.drive.change_offset("altitude", -self.OFFSET_CHANGE)
+    #     if key == QtCore.Qt.Key_D:
+    #         self.srt.drive.change_offset("azimuth", self.OFFSET_CHANGE)
+    #     if key == QtCore.Qt.Key_W:
+    #         self.srt.drive.change_offset("altitude", self.OFFSET_CHANGE)
+    #     event.accept()
 
-    def keyReleaseEvent(self, event):
-        if event.isAutoRepeat(): return
-        pressed = event.key()
-        if pressed in self.cursorkeys:
-            # Stop the motors as soon as the key is released
-            self.srt.drive.panic()
-        event.accept()
+    # def keyReleaseEvent(self, event):
+    #     if event.isAutoRepeat(): return
+    #     pressed = event.key()
+    #     if pressed in self.cursorkeys:
+    #         # Stop the motors as soon as the key is released
+    #         self.srt.drive.panic()
+    #     event.accept()
         
         
     def updateStatusBar(self,status):

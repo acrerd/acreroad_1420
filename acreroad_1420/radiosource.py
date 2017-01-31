@@ -177,7 +177,7 @@ class GalacticPlane():
             if point.alt.value > -10:
                 points.append((point.az.value, point.alt.value))
         
-        print points
+        #print points
         self.points = points
 
                 

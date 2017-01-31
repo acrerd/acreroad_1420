@@ -12,6 +12,7 @@ import os
 from subprocess import Popen
 import threading
 import shlex
+import time
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -90,8 +91,9 @@ class Scheduler():
                 print "\t Starting to slew"
                 self.drive.goto(schedule[0]['position'], track=False)
                 # The next few lines might, conceivably, not be the best way to do this
-                while not self.drive.slewSuccess(schedule[0]['position']):
-                    continue
+                #while not self.drive.slewSuccess(schedule[0]['position']):
+                #    continue
+                time.sleep(100)
                 print "Slew Complete"
                 current_slew = False
                 
@@ -289,7 +291,7 @@ class Scheduler():
                     
                 start_isot = Time(start, format="datetime").isot
                 outfile_pos = position.transform_to(ICRS)
-                outfile = "/home/astro/srt2016/ra{:.2f}dec{:.2f}time{}.dat".format(outfile_pos.ra.value, outfile_pos.dec.value, start_isot)
+                outfile = "/home/astro/srt2017/ra{:.2f}dec{:.2f}time{}.dat".format(outfile_pos.ra.value, outfile_pos.dec.value, start_isot)
 
                 outputarg = ['-o', outfile]
 

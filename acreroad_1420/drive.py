@@ -22,6 +22,7 @@ simulate : bool
 
 """
 
+import time
 import re, datetime, time
 import ConfigParser
 import numpy as np
@@ -112,7 +113,7 @@ class Drive():
         Examples
         --------
         
-        >>> from acreroad_1420 import drive
+        >> from acreroad_1420 import drive
         >>> connection = drive.Drive('/dev/tty.usbserial', 9600, simulate=1)
         
         """
@@ -183,10 +184,11 @@ class Drive():
 
         self.calibration = calibration
         self.calibrate(calibration)
+        #self.calibrate()
 
         # Set the format we want to see status strings produced in; we just want azimuth and altitude.
-        self.set_status_cadence(200)
-        self.set_status_message('za')
+        #self.set_status_cadence(200)
+        #self.set_status_message('za')
         self.target = (self.az_home, self.el_home)
 
         if not persist:
@@ -197,8 +199,11 @@ class Drive():
         self.setTime()
 
         # Tell the Arduino where it is
-        self.setLocation(location)
+        #self.setLocation(location)
 
+        # Home on start
+        self.home()
+        
         if not self.sim:
             self.listen_thread =  threading.Thread(target=self._listener)
             self.listen_thread.daemon = True
@@ -253,8 +258,9 @@ class Drive():
             return 1
         else:
             # Pass the command to the Arduino via pyserial
+            print "Command: {}".format(string)
             self.ser.write(string.encode('ascii'))
-
+            #print string.encode("ascii")
             # Retrieve the return message from the controller
             #ret_line =  self.ser.readline()
             #if ret_line: return ret_line
@@ -263,18 +269,22 @@ class Drive():
         
     def _listener(self):
         while True:
-            line = self.ser.readline()
-            self.parse(line)
+            try:
+                line = self.ser.readline()
+                self.parse(line)
+            except Exception as e:
+                print str(e)
+                print "Parser error, continuing. \n {}".format(line)
+        time.sleep(0.5)
 
     def _stat_update(self, az, alt):
         self.az, self.alt = az, alt
-        az = az
         if self.slewSuccess(self.target):
             self.slewing = False
             self.homing = False
             
     def parse(self, string):
-        print string
+        #print string
         # Ignore empty lines
         if len(string)<1: return 0
         
@@ -285,14 +295,18 @@ class Drive():
                 # This currently seems to be broken, so pass
                 pass
                 # print("string", string[2:])
-                # d = string[2:].split()
-                # out = {}
-                # for field in d:
-                #     key, val = field.split("=")
-                #     out[key] = val
-                # print("d", out)
-                # az, alt = out['Taz'], out['Talt']
-                # return out
+                d = string[2:].split()
+                out = {}
+                for field in d:
+                    key, val = field.split("=")
+                    out[key] = val
+                #print("d", out)
+                try:
+                    #print "Status string"
+                    az, alt = out['Taz'], out['Talt']
+                except KeyError:
+                    print 'Key missing from the status output {}'.format(out)
+                return out
             if string[1]=='c': # This is the return from a calibration run
                 self.calibrating=False
                 self.config.set('offsets','calibration',string[2:])
@@ -302,30 +316,40 @@ class Drive():
         # A status string
         elif string[0]=="s" and len(string)>1:
             # Status strings are comma separated
-            d = string[2:].split(",")
+            d = string[2:].strip('\n').split(",")
+            if len(d) > 3: return
             try:
-                try:
-                    az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
-                    az = str(np.pi - az)
-                    self._stat_update( self._r2d(az), self._r2d(alt) )
-                except:
-                    pass
-            except IndexError:
+                #try:
+                az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
+                az = np.pi - az
+                self._stat_update( self._r2d(az), self._r2d(alt) )
+            except:
+                print("Error", d)
+                if len(d)<3: return
+                az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
+                print az, type(az)
+                #print alt, self._r2d(az), az
+                self._stat_update( self._r2d(az), self._r2d(alt) )
+                #    print self._parse_floats(d[1]), self._parse_floats(d[2])
+
+                pass
+            #except IndexError:
                 # Sometimes (early on?) the drive appears to produce
                 # an incomplete status string. These need to be
                 # ignored otherwise the parser crashes the listener
                 # process.
-                pass
+            #    pass
             return d
         elif string[0]=="a":            
             if string[1]=="z" or string[1]=="l":
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
                 #print string, d
+                print d
                 self._stat_update(self._r2d(self._parse_floats(d[3])), self._r2d(self._parse_floats(d[4])))
         elif string[0]=="!":
             # This is an error string
-            print string[1:]
+            print "Error: {}".format(string[1:])
         elif string[0]=="#":
             pass
             #print string
@@ -351,8 +375,10 @@ class Drive():
         cx,cy = self.status()['az'], self.status()['alt']
         try:
             realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
-        except:
-            print cx, cy
+        except Exception as e:
+            print str(e)
+            pass
+            #print cx, cy
         d = 1.5
 
         #print targetPos
@@ -370,7 +396,7 @@ class Drive():
         Converts radians to degrees.
         """
         degrees = radians*(180/np.pi)
-        if degrees < 0 : 180 - degrees 
+        #if degrees < 0 : 180 - degrees 
         return degrees%360
         
     def _d2r(self, degrees):
@@ -378,12 +404,12 @@ class Drive():
         Converts degrees to radians.
         """
         radians =  degrees*(np.pi/180)
-        if radians < 0 : radians = (np.pi-radians)
+        if radians < 0 : radians = radians #(np.pi-radians)
         return radians%(2*np.pi)
 
     def _parse_floats(self, string):
         """Parses the float outputs from the controller in a robust way which
-        allows for the exponent to be a floating-point numberm, which
+        allows for the exponent to be a floating-point number, which
         is not supported by Python.
 
         Parameters
@@ -396,6 +422,8 @@ class Drive():
         float
            A float which is in the correct format for Python.
         """
+        if string == '0e0':
+            return 0.0
         parts = string.split('e')
         if len(parts)==2:
             return float(parts[0]) * 10**float(parts[1])
@@ -642,9 +670,9 @@ class Drive():
         """
         Slews the telescope to the stowing position (pointed at the zenith)
         """
-        zenith = self._d2r(90)
-        command_str = "gh 2.0 "+str(zenith)
-        self.target = (120.0, 90.0)
+        zenith = self._d2r(89)
+        command_str = "gh 1.6 1.5"#+str(zenith)
+        self.target = (0.0, 90.0)
         return self._command(command_str)
         
 
@@ -673,7 +701,7 @@ class Drive():
         
         """
         command_str = "S"
-        self._command(command_str)
+        #self._command(command_str)
         #time.sleep(0.1)
         return {'ra':self.ra, 'dec': self.dec, 'alt':self.alt, 'az':self.az}
 
