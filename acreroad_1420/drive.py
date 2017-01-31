@@ -35,6 +35,8 @@ import threading
 from os.path import expanduser, isfile, join
 import os.path
 
+import logging
+
 
 
 class Drive():
@@ -49,7 +51,28 @@ class Drive():
         "DRIVE_WEST": "gW",
         "DRIVE_HOME": "gH",
         "SET_SPEED" : "ta {}",
-        "CALIBRATE" : "c {} {}",
+        "CALIBRATE" : "c {:f} {:f}",
+        "STOP"      : "x",
+        "STOW"      : "X",
+        "SET_TIME"  : "T {:d} {:d} {:d} {:d} {:d} {:d}",
+        # status command, s, not currently implemented this way
+        "STATUS_CAD": "s {:d}",
+        "GOTO_HOR" : "gh {:f} {:f}",
+        "GOTO_EQ"  : "ge {:f} {:f}",
+        # Nudges
+        "NUDGE_UP"  : "nu {:f}",
+        "NUDGE_DOWN": "nd {:f}",
+        "NUDGE_WEST": "nw {:f}",
+        "NUDGE_EAST": "ne {:f}",
+        # Setup
+        "SETUP"     : "O {:f} {:f} {:f} {:f} {:f} {:f} {:f}",
+        # QUEUE
+        "QUEUE"     : "q",
+        # TRACKING
+        # disabled as of qp v0.7b2
+        #"TRACK_SID"  : "ts",
+        #"TRACK_RA"   : "ts {:f}",
+        "TRACK_AZ"    : "ta {:f}",
         }
     
     MAX_SPEED = 0.5
@@ -132,7 +155,16 @@ class Drive():
             config.read(config_file_name)
         else:
             config.read('settings.cfg')
-                                    
+
+        #
+        # Setup the logger
+        #
+        logfile = config.get('logs', 'logfile')
+        logging.basicConfig(filename=logfile,
+                            format='[%(levelname)s] [%(asctime)s] [%(message)s]',
+                            level=logging.INFO)
+        
+            
         #
         # Fetch the sky position which corresponds to the 'home' position of the telescope
         #
@@ -152,6 +184,7 @@ class Drive():
         #
         
         if not location:
+            logging.info("The observatory location was not provided, so it will be loaded from the config file")
             observatory = config.get('observatory', 'location').split()
             location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
 
@@ -169,11 +202,13 @@ class Drive():
         if not device:
             device = config.get('arduino','dev')
         
-        if not self.sim: self._openconnection(device, baud)
+        if not self.sim:
+            self._openconnection(device, baud)
+            logging.info("Drive controller connected.")
 
         
         # Give the Arduino a chance to power-up
-        time.sleep(1)
+        time.sleep(5)
 
         if not calibration:
             try: 
@@ -191,10 +226,6 @@ class Drive():
         #self.set_status_message('za')
         self.target = (self.az_home, self.el_home)
 
-        if not persist:
-            # Automatically home the telescope
-            self.home()
-
         # Set the Arduino clock
         self.setTime()
 
@@ -202,6 +233,7 @@ class Drive():
         #self.setLocation(location)
 
         # Home on start
+        logging.info("Homing the telescope.")
         self.home()
         
         if not self.sim:
@@ -228,6 +260,7 @@ class Drive():
         import serial
         try:
             self.ser = serial.Serial(device, baud, timeout=self.timeout)
+            logging.info("Drive connected on {} at {} baud".format(device, baud))
         except SerialException:
             # The arduino might be connected, but it's not at that
             # device address, so let's have a look around.
@@ -250,6 +283,7 @@ class Drive():
         string = string+"\n"
 
         if not self.com_format.match(string):
+            logging.error("Invalid command rejected: {}".format(string))
             raise ValueError(string+" : This string doesn't have the format of a valid controller command.'")
 
         
@@ -258,13 +292,8 @@ class Drive():
             return 1
         else:
             # Pass the command to the Arduino via pyserial
-            print "Command: {}".format(string)
+            logging.debug("Command: {}".format(string))
             self.ser.write(string.encode('ascii'))
-            #print string.encode("ascii")
-            # Retrieve the return message from the controller
-            #ret_line =  self.ser.readline()
-            #if ret_line: return ret_line
-            #else : return 1
             return 1
         
     def _listener(self):
@@ -274,7 +303,7 @@ class Drive():
                 self.parse(line)
             except Exception as e:
                 print str(e)
-                print "Parser error, continuing. \n {}".format(line)
+                logging.error("Parser error, continuing. \n {}".format(line))
         time.sleep(0.5)
 
     def _stat_update(self, az, alt):
@@ -305,9 +334,15 @@ class Drive():
                     #print "Status string"
                     az, alt = out['Taz'], out['Talt']
                 except KeyError:
-                    print 'Key missing from the status output {}'.format(out)
+                    logging.error('Key missing from the status output {}'.format(out))
                 return out
-            if string[1]=='c': # This is the return from a calibration run
+            if string[1:3] == "g A":
+                # This is the flag confirming that the telescope has reached the destination.
+                self.slewing = False
+                logging.info("The telescope has reached {}".format(string[3:]))
+            if string[1]=='c':
+                # This is the return from a calibration run
+                logging.info("Calibration completed. New values are {}".format(string[2:]))
                 self.calibrating=False
                 self.config.set('offsets','calibration',string[2:])
                 self.calibration = string[2:]
@@ -324,10 +359,11 @@ class Drive():
                 az = np.pi - az
                 self._stat_update( self._r2d(az), self._r2d(alt) )
             except:
-                print("Error", d)
+                logging.error(d)
+                logging.info("{} az, {} alt".format(az, alt))
                 if len(d)<3: return
                 az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
-                print az, type(az)
+                #print az, type(az)
                 #print alt, self._r2d(az), az
                 self._stat_update( self._r2d(az), self._r2d(alt) )
                 #    print self._parse_floats(d[1]), self._parse_floats(d[2])
@@ -349,8 +385,10 @@ class Drive():
                 self._stat_update(self._r2d(self._parse_floats(d[3])), self._r2d(self._parse_floats(d[4])))
         elif string[0]=="!":
             # This is an error string
+            logging.error(string[1:])
             print "Error: {}".format(string[1:])
         elif string[0]=="#":
+            logging.info(string[1:])
             pass
             #print string
         #     # This is a comment string
@@ -361,35 +399,40 @@ class Drive():
         #             pass
 
         #    pass
-        else: pass#print string
+        else: pass
         
 
     def slewSuccess(self,targetPos):
         """
+        Checks if the slew has completed. This /should/ now be 
+        entirely handled by qp, and all we need to do is to 
+        check that the slewing flag is false.
         """
-        if type(targetPos) is tuple:
-            (cx, cy) = targetPos
-            #if cx > 90.0: cx -= (cx - 90) 
-            targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
-            
-        cx,cy = self.status()['az'], self.status()['alt']
-        try:
-            realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
-        except Exception as e:
-            print str(e)
-            pass
-            #print cx, cy
-        d = 1.5
-
-        #print targetPos
-        #print realPos
-        #print targetPos.separation(realPos).value
+        return self.slewing
         
-        if targetPos.separation(realPos).value <= d:
-            #print("Finished slewing to " + str(self.getCurrentPos()))
-            return True
-        else:
-            return False
+        # if type(targetPos) is tuple:
+        #     (cx, cy) = targetPos
+        #     #if cx > 90.0: cx -= (cx - 90) 
+        #     targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
+            
+        # cx,cy = self.status()['az'], self.status()['alt']
+        # try:
+        #     realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
+        # except Exception as e:
+        #     print str(e)
+        #     pass
+        #     #print cx, cy
+        # d = 1.5
+
+        # #print targetPos
+        # #print realPos
+        # #print targetPos.separation(realPos).value
+        
+        # if targetPos.separation(realPos).value <= d:
+        #     #print("Finished slewing to " + str(self.getCurrentPos()))
+        #     return True
+        # else:
+        #     return False
             
     def _r2d(self, radians):
         """
@@ -408,7 +451,8 @@ class Drive():
         return radians%(2*np.pi)
 
     def _parse_floats(self, string):
-        """Parses the float outputs from the controller in a robust way which
+        """
+        Parses the float outputs from the controller in a robust way which
         allows for the exponent to be a floating-point number, which
         is not supported by Python.
 
@@ -530,11 +574,13 @@ class Drive():
            The calibration values produced by a previous calibration run of the telescope, provided in the format "nnn nnn"
 
         """
-        if self.sim: return ">c 000 000"
+        if self.sim:
+            return ">c 000 000"
         if values:                      
             # Check the format of the values string.
             if self.cal_format.match(values):
-                return self._command("c "+values)
+                return self._command(self.vocabulary["CALIBRATE"].format(values[0], values[1]))
+                #return self._command("c "+values)
         else:
             self.calibrating=True
             return self._command("c")
