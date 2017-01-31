@@ -97,6 +97,7 @@ class Drive():
     homing = False
     ready = False
     tracking = False
+    slewing = False
 
     # String formats
 
@@ -162,7 +163,7 @@ class Drive():
         logfile = config.get('logs', 'logfile')
         logging.basicConfig(filename=logfile,
                             format='[%(levelname)s] [%(asctime)s] [%(message)s]',
-                            level=logging.INFO)
+                            level=logging.DEBUG)
         
             
         #
@@ -336,6 +337,14 @@ class Drive():
                 except KeyError:
                     logging.error('Key missing from the status output {}'.format(out))
                 return out
+            if string[1:3] == "g E":
+                # Telescope has reached an endstop and will need to be homed before continuing.
+                logging.info("The telescope appears to have hit an end-stop.")
+                self.home()
+                logging.info("Rehoming the telescope.")
+                self._command(self.vocabulary("QUEUE"))
+                logging.info("After re-homing the telescope will attempt to move to the requested location again.")
+                self.goto(self.target)
             if string[1:3] == "g A":
                 # This is the flag confirming that the telescope has reached the destination.
                 self.slewing = False
@@ -347,6 +356,8 @@ class Drive():
                 self.config.set('offsets','calibration',string[2:])
                 self.calibration = string[2:]
                 #print string
+            else:
+                logging.info(string[1:])
 
         # A status string
         elif string[0]=="s" and len(string)>1:
@@ -655,22 +666,23 @@ class Drive():
 
         skycoord = skycoord.transform_to(AltAz(obstime=time, location=self.location))
 
-        print "Going to {0.az} {0.alt}".format(skycoord)
+        logging.info("Going to {0.az} {0.alt}".format(skycoord))
 
         self.target = skycoord
         self.status()
         # construct a command string
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
-        print command_str
         # pass the slew-to command to the controller
         if self._command(command_str):
             print "Command received."
             if track:
-                self.tracking = True
-                command_str = "q"
-                self._command(command_str)
-                command_str = "ts"
-                self._command(command_str)
+                pass
+                # disabled for the moment, must reimplement in Python.
+                #self.tracking = True
+                #command_str = "q"
+                #self._command(command_str)
+                #command_str = "ts"
+                #self._command(command_str)
             self.slewing = True
         else:
             self.slewing = False
@@ -719,7 +731,7 @@ class Drive():
         zenith = self._d2r(89)
         command_str = "gh 1.6 1.5"#+str(zenith)
         self.target = (0.0, 90.0)
-        return self._command(command_str)
+        return self._command(self.vocabulary["STOW"])
         
 
     def skycoord(self):
