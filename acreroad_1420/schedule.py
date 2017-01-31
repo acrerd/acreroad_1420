@@ -84,16 +84,16 @@ class Scheduler():
                 current_job = Popen(schedule[0]['command'])
                 print "There are {} jobs in the queue".format(len(schedule))
                 
-            if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewSuccess(schedule[0]['position'])):
+            if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewSuccess()):
                 # If nothing's happening already, but it's time something should be
                 # then start the slew
                 current_slew = True
                 print "\t Starting to slew"
                 self.drive.goto(schedule[0]['position'], track=False)
                 # The next few lines might, conceivably, not be the best way to do this
-                #while not self.drive.slewSuccess(schedule[0]['position']):
-                #    continue
-                time.sleep(100)
+                while not self.drive.slewSuccess():
+                    continue
+                #time.sleep(100)
                 print "Slew Complete"
                 current_slew = False
                 
@@ -235,7 +235,6 @@ class Scheduler():
                     position = SkyCoord(position[1:], Galactic, unit=(u.deg, u.deg))
                 elif position[0]=='h':
                     position = SkyCoord(position[1:], frame = AltAz(obstime=start,location=self.drive.location), unit=(u.deg, u.deg))
-                
                 elif position[0]=='e':
                     c = SkyCoord(position[1:], ICRS, unit=(u.deg, u.deg))
                 else:
