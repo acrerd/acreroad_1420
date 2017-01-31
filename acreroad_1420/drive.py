@@ -309,7 +309,7 @@ class Drive():
 
     def _stat_update(self, az, alt):
         self.az, self.alt = az, alt
-        if self.slewSuccess(self.target):
+        if self.slewSuccess():
             self.slewing = False
             self.homing = False
             
@@ -413,7 +413,7 @@ class Drive():
         else: pass
         
 
-    def slewSuccess(self,targetPos):
+    def slewSuccess(self,):
         """
         Checks if the slew has completed. This /should/ now be 
         entirely handled by qp, and all we need to do is to 
