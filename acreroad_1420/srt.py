@@ -4,6 +4,7 @@ Author: Ronnie Frith
 Contact: frith.ronnie@gmail.com
 """
 
+from . import CONFIGURATION as config
 import time, astropy
 from astropy.time import Time
 from astropy import units as u
@@ -30,7 +31,7 @@ class Mode:
 
 class SRT():   
     def __init__(self,mode,device,calibrationSpeeds):
-        baud = 19200 #115200
+        baud = config.get('arduino', 'baud')
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:

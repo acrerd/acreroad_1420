@@ -24,7 +24,7 @@ simulate : bool
 
 import time
 import re, datetime, time
-import ConfigParser
+from . import CONFIGURATION as config
 import numpy as np
 import astropy
 from astropy.coordinates import SkyCoord, ICRS, EarthLocation, AltAz
@@ -107,7 +107,7 @@ class Drive():
     #stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
     stat_format = re.compile(r"(?=\s+)([\w_]+)\s*=\s*([\d_:\.T]+)")
     
-    def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None, persist=True):
+    def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None, persist=True, homeonstart=True):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -145,19 +145,7 @@ class Drive():
         #
         # Configuration settings are kept in a config file
         #
-        
-        # Look for the config file in sensible places
 
-        home_dir = expanduser('~')
-        config_file_name = home_dir+"/.acreroad_1420/settings.cfg"
-
-        config = self.config = ConfigParser.SafeConfigParser()
-        if isfile(config_file_name):
-            config.read(config_file_name)
-        else:
-            config.read('settings.cfg')
-
-        #
         # Setup the logger
         #
         logfile = config.get('logs', 'logfile')
@@ -201,7 +189,7 @@ class Drive():
         # required. This is now handled by the `_openconnection()`
         # method.
         if not device:
-            device = config.get('arduino','dev')
+            device = CONFIGURATION.get('arduino','dev')
         
         if not self.sim:
             self._openconnection(device, baud)
@@ -235,7 +223,8 @@ class Drive():
 
         # Home on start
         logging.info("Homing the telescope.")
-        self.home()
+        if homeonstart:
+            self.home()
         
         if not self.sim:
             self.listen_thread =  threading.Thread(target=self._listener)
