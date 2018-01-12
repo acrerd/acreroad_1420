@@ -4,6 +4,9 @@ include HISTORY.rst
 include LICENSE
 include README.rst
 
+include acreroad_1420/acreroad_1420.conf
+include acreroad_1420/radiosources.cat
+
 recursive-include tests *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
