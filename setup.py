@@ -27,7 +27,7 @@ test_requirements = [
 
 setup(
     name='acreroad_1420',
-    version='0.1.0',
+    version='0.2.0',
     description="Control, operation, and analysis code for the 1420 MHz telescope at the Acre Road Observatory, University of Glasgow.",
     long_description=readme + '\n\n' + history,
     author="Daniel Williams",
