@@ -61,7 +61,7 @@ class Scheduler():
         
         
         #print "There are {} jobs in the queue.".format(len(schedule))
-
+        pointed = False
         current_job = None
         current_slew = False
         while True:
@@ -84,25 +84,29 @@ class Scheduler():
                 current_job = Popen(schedule[0]['command'])
                 print "There are {} jobs in the queue".format(len(schedule))
                 
-            if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewSuccess()):
+            if (datetime.datetime.now() > schedule[0]['slewstart']) & (not current_slew) & (not current_job) & (not self.drive.slewing) & (not pointed ):
                 # If nothing's happening already, but it's time something should be
                 # then start the slew
                 current_slew = True
+                
                 print "\t Starting to slew"
                 self.drive.goto(schedule[0]['position'], track=False)
                 # The next few lines might, conceivably, not be the best way to do this
-                while not self.drive.slewSuccess():
+                while self.drive.slewing:
+                    #print "Slewing... {}".format(self.drive.slewing)
+                    time.sleep(1)
                     continue
                 #time.sleep(100)
                 print "Slew Complete"
                 current_slew = False
+                pointed = True
                 
             elif (datetime.datetime.now() > schedule[0]['end']):
                 # It's time to stop the observation, so let's send a SIGTERM
                 current_job.terminate()
                 current_job = None
                 print "Job ended"
-
+                pointed = False
                 # if a 'then' directive has been added this should now be acted upon.
                 if schedule[0]['then']:
                     procs = schedule[0]['then']

@@ -209,7 +209,7 @@ class Drive():
 
         
         # Give the Arduino a chance to power-up
-        time.sleep(5)
+        time.sleep(1)
 
         if not calibration:
             try: 
@@ -309,15 +309,15 @@ class Drive():
 
     def _stat_update(self, az, alt):
         self.az, self.alt = az, alt
-        if self.slewSuccess():
-            self.slewing = False
-            self.homing = False
+        #if self.slewSuccess():
+        #    self.slewing = False
+        #    self.homing = False
             
     def parse(self, string):
         #print string
         # Ignore empty lines
         if len(string)<1: return 0
-        
+        logging.debug(string)
         # A specific output from a function
         if string[0]==">":
             #print string
@@ -340,12 +340,12 @@ class Drive():
             if string[1:3] == "g E":
                 # Telescope has reached an endstop and will need to be homed before continuing.
                 logging.info("The telescope appears to have hit an end-stop.")
-                self.home()
-                logging.info("Rehoming the telescope.")
-                self._command(self.vocabulary("QUEUE"))
-                logging.info("After re-homing the telescope will attempt to move to the requested location again.")
-                self.goto(self.target)
-            if string[1:3] == "g A":
+                #self.home()
+                #logging.info("Rehoming the telescope.")
+                #self._command(self.vocabulary["QUEUE"])
+                #logging.info("After re-homing the telescope will attempt to move to the requested location again.")
+                #self.goto(self.target)
+            if string[1:4] == "g A":
                 # This is the flag confirming that the telescope has reached the destination.
                 self.slewing = False
                 logging.info("The telescope has reached {}".format(string[3:]))
@@ -367,7 +367,8 @@ class Drive():
             try:
                 #try:
                 az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
-                az = np.pi - az
+                #az = np.pi - az
+                
                 self._stat_update( self._r2d(az), self._r2d(alt) )
             except:
                 logging.error(d)
@@ -392,7 +393,7 @@ class Drive():
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
                 #print string, d
-                print d
+                #print d
                 self._stat_update(self._r2d(self._parse_floats(d[3])), self._r2d(self._parse_floats(d[4])))
         elif string[0]=="!":
             # This is an error string
@@ -419,7 +420,7 @@ class Drive():
         entirely handled by qp, and all we need to do is to 
         check that the slewing flag is false.
         """
-        return self.slewing
+        return (not self.slewing)
         
         # if type(targetPos) is tuple:
         #     (cx, cy) = targetPos
@@ -671,21 +672,14 @@ class Drive():
         self.target = skycoord
         self.status()
         # construct a command string
+        #self._command(self.vocabulary["QUEUE"])
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         # pass the slew-to command to the controller
         if self._command(command_str):
-            print "Command received."
-            if track:
-                pass
-                # disabled for the moment, must reimplement in Python.
-                #self.tracking = True
-                #command_str = "q"
-                #self._command(command_str)
-                #command_str = "ts"
-                #self._command(command_str)
-            self.slewing = True
+            # self.slewing = True
+            pass
         else:
-            self.slewing = False
+            self.slewing = True
             raise ControllerException("The telescope has failed to slew to the requested location")
 
     def track(self, tracking=True):
