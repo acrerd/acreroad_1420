@@ -197,7 +197,7 @@ class Drive():
 
         
         # Give the Arduino a chance to power-up
-        time.sleep(5)
+        time.sleep(1)
 
         if not calibration:
             try: 
@@ -230,6 +230,11 @@ class Drive():
             self.listen_thread =  threading.Thread(target=self._listener)
             self.listen_thread.daemon = True
             self.listen_thread.start()
+
+        self.track()
+        self.stop_track()
+
+        
 
     @property
     def current_time(self):
@@ -298,15 +303,15 @@ class Drive():
 
     def _stat_update(self, az, alt):
         self.az, self.alt = az, alt
-        if self.slewSuccess():
-            self.slewing = False
-            self.homing = False
+        #if self.slewSuccess():
+        #    self.slewing = False
+        #    self.homing = False
             
     def parse(self, string):
         #print string
         # Ignore empty lines
         if len(string)<1: return 0
-        
+        logging.debug(string)
         # A specific output from a function
         if string[0]==">":
             #print string
@@ -329,12 +334,12 @@ class Drive():
             if string[1:3] == "g E":
                 # Telescope has reached an endstop and will need to be homed before continuing.
                 logging.info("The telescope appears to have hit an end-stop.")
-                self.home()
-                logging.info("Rehoming the telescope.")
-                self._command(self.vocabulary("QUEUE"))
-                logging.info("After re-homing the telescope will attempt to move to the requested location again.")
-                self.goto(self.target)
-            if string[1:3] == "g A":
+                #self.home()
+                #logging.info("Rehoming the telescope.")
+                #self._command(self.vocabulary["QUEUE"])
+                #logging.info("After re-homing the telescope will attempt to move to the requested location again.")
+                #self.goto(self.target)
+            if string[1:4] == "g A":
                 # This is the flag confirming that the telescope has reached the destination.
                 self.slewing = False
                 logging.info("The telescope has reached {}".format(string[3:]))
@@ -356,7 +361,8 @@ class Drive():
             try:
                 #try:
                 az, alt = self._parse_floats(d[1]), self._parse_floats(d[2])
-                az = np.pi - az
+                #az = np.pi - az
+                
                 self._stat_update( self._r2d(az), self._r2d(alt) )
             except:
                 logging.error(d)
@@ -381,7 +387,7 @@ class Drive():
                 # This is an azimuth or an altitude click, update the position
                 d = string.split(",")
                 #print string, d
-                print d
+                #print d
                 self._stat_update(self._r2d(self._parse_floats(d[3])), self._r2d(self._parse_floats(d[4])))
         elif string[0]=="!":
             # This is an error string
@@ -408,7 +414,8 @@ class Drive():
         entirely handled by qp, and all we need to do is to 
         check that the slewing flag is false.
         """
-        return self.slewing
+
+        #return (not self.slewing)
         
         # if type(targetPos) is tuple:
         #     (cx, cy) = targetPos
@@ -433,6 +440,7 @@ class Drive():
         #     return True
         # else:
         #     return False
+        return self.slewing
             
     def _r2d(self, radians):
         """
@@ -645,7 +653,8 @@ class Drive():
 
         self.target = skycoord
 
-        self.tracking = False
+        # Stop any ongoing tracking
+        self.stop_track()
         self.slewing = True
 
         # To do : We need to make sure that this behaves nicely with a
@@ -660,26 +669,40 @@ class Drive():
         self.target = skycoord
         self.status()
         # construct a command string
+        #self._command(self.vocabulary["QUEUE"])
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         # pass the slew-to command to the controller
         if self._command(command_str):
-            print "Command received."
-            if track:
-                pass
-                # disabled for the moment, must reimplement in Python.
-                #self.tracking = True
-                #command_str = "q"
-                #self._command(command_str)
-                #command_str = "ts"
-                #self._command(command_str)
-            self.slewing = True
+            # self.slewing = True
+            pass
+
+            #print "Command received."
+            #self.slewing = True
+
         else:
-            self.slewing = False
+            self.slewing = True
             raise ControllerException("The telescope has failed to slew to the requested location")
 
-    def track(self, tracking=True):
-        """
-        Make the drive track an object.
+        if track:
+            self.track()
+        
+    def track(self, interval = 60):
+        """Make the drive track an object.
+
+        Notes
+        -----
+
+        At the moment qp can't handle tracking correctly, and so this
+        is implemented in this module in a slightly less graceful
+        manner. The position of the drive is checked at regular
+        intervals, and is corrected to keep an object within the beam
+        of the telescope, by simply driving forwards.
+
+        This allows a little more flexibility than keeping the drive
+        running continuously at slow speed, as we can track faster
+        moving objects, e.g. the sun, this way. However, tracking a
+        very fast-moving object is probably impractical (e.g. a
+        satellite), and would require something more robust.
         """
         
         #if tracking:
@@ -695,11 +718,32 @@ class Drive():
         #     command_str = "ts 0.0"
         #     self._command(command_str)
 
-        # current position
-        alt, az = self.el, self.az
-        if tracking:
-            #difference_alt = 
-            pass
+        # Set the tracking flag
+        self.tracking = True
+
+        # Set-up the threaded tracking process as a timer
+
+        self.tracking_thread = threading.Timer(self._tracking, interval)
+        self.tracking_thread.start()
+
+    def stop_track(self):
+        """
+        Stop on-going tracking.
+        """
+        
+        self.tracking_thread.cancel()
+        self.tracking = False
+            
+    def _tracking(self):
+        """This is the function which actually carries out the heavy lifting
+        required for the telescope tracking to work. It's not all that
+        sophisticated.
+        """
+
+        # Do not track if the telescope is still slewing
+        if not self.slewing:
+            self.goto(self.target)
+        
 
     def home(self):
         """
