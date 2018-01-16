@@ -231,9 +231,12 @@ class Drive():
             self.listen_thread.daemon = True
             self.listen_thread.start()
 
+<<<<<<< HEAD
         self.track()
         self.stop_track()
 
+=======
+>>>>>>> e4c9ce27eba7af37c6708529480298c55c213d8a
         
 
     @property
@@ -414,6 +417,7 @@ class Drive():
         entirely handled by qp, and all we need to do is to 
         check that the slewing flag is false.
         """
+<<<<<<< HEAD
 
         #return (not self.slewing)
         
@@ -440,6 +444,8 @@ class Drive():
         #     return True
         # else:
         #     return False
+=======
+>>>>>>> e4c9ce27eba7af37c6708529480298c55c213d8a
         return self.slewing
             
     def _r2d(self, radians):
@@ -673,12 +679,17 @@ class Drive():
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         # pass the slew-to command to the controller
         if self._command(command_str):
+<<<<<<< HEAD
             # self.slewing = True
             pass
 
             #print "Command received."
             #self.slewing = True
 
+=======
+            print "Command received."
+            self.slewing = True
+>>>>>>> e4c9ce27eba7af37c6708529480298c55c213d8a
         else:
             self.slewing = True
             raise ControllerException("The telescope has failed to slew to the requested location")
@@ -723,6 +734,7 @@ class Drive():
 
         # Set-up the threaded tracking process as a timer
 
+<<<<<<< HEAD
         self.tracking_thread = threading.Timer(self._tracking, interval)
         self.tracking_thread.start()
 
@@ -735,6 +747,20 @@ class Drive():
         self.tracking = False
             
     def _tracking(self):
+=======
+        self.tracking_thread = tracking.Timer(self._tracking, interval)
+        self.tracking_thread.start()
+
+    def stop_track():
+        """
+        Stop on-going tracking.
+        """
+        if self.tracking_thread:
+            self.tracking_thread.stop()
+            self.tracking = False
+            
+    def _tracking():
+>>>>>>> e4c9ce27eba7af37c6708529480298c55c213d8a
         """This is the function which actually carries out the heavy lifting
         required for the telescope tracking to work. It's not all that
         sophisticated.
