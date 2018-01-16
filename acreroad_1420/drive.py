@@ -688,7 +688,7 @@ class Drive():
 
         # Set-up the threaded tracking process as a timer
 
-        self.tracking_thread = tracking.Timer(self._tracking, 60)
+        self.tracking_thread = tracking.Timer(self._tracking, interval)
         self.tracking_thread.start()
 
     def stop_track():
