@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 class Scheduler():
     schedule = []
     next_id = 1
-    def __init__(self, drive=None):
+    def __init__(self, rootdir=os.expanduser("~"), drive=None):
         """
         A pythonic event scheduler for radio telescopes.
         The scheduler allows the driving and observations to be controlled for a radio telescope.
@@ -33,7 +33,7 @@ class Scheduler():
         """
         # In the initialisation we should probably load at least the drive object!
         self.drive = drive
-        
+        self.rootdir = rootdir
         self.drive.home()
 
         # We should now run the scheduler in a subthread, so that it's still possible to edit the queue
@@ -294,7 +294,7 @@ class Scheduler():
                     
                 start_isot = Time(start, format="datetime").isot
                 outfile_pos = position.transform_to(ICRS)
-                outfile = "/home/astro/srt2017/ra{:.2f}dec{:.2f}time{}.dat".format(outfile_pos.ra.value, outfile_pos.dec.value, start_isot)
+                outfile = "{}/ra{:.2f}dec{:.2f}time{}.dat".format(self.rootdir, outfile_pos.ra.value, outfile_pos.dec.value, start_isot)
 
                 outputarg = ['-o', outfile]
 

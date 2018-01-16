@@ -231,6 +231,8 @@ class Drive():
             self.listen_thread.daemon = True
             self.listen_thread.start()
 
+        
+
     @property
     def current_time(self):
         """
@@ -409,7 +411,8 @@ class Drive():
         entirely handled by qp, and all we need to do is to 
         check that the slewing flag is false.
         """
-        return (not self.slewing)
+
+        #return (not self.slewing)
         
         # if type(targetPos) is tuple:
         #     (cx, cy) = targetPos
@@ -434,6 +437,7 @@ class Drive():
         #     return True
         # else:
         #     return False
+        return self.slewing
             
     def _r2d(self, radians):
         """
@@ -646,7 +650,8 @@ class Drive():
 
         self.target = skycoord
 
-        self.tracking = False
+        # Stop any ongoing tracking
+        self.stop_track()
         self.slewing = True
 
         # To do : We need to make sure that this behaves nicely with a
@@ -667,13 +672,34 @@ class Drive():
         if self._command(command_str):
             # self.slewing = True
             pass
+
+            #print "Command received."
+            #self.slewing = True
+
         else:
             self.slewing = True
             raise ControllerException("The telescope has failed to slew to the requested location")
 
-    def track(self, tracking=True):
-        """
-        Make the drive track an object.
+        if track:
+            self.track()
+        
+    def track(self, interval = 60):
+        """Make the drive track an object.
+
+        Notes
+        -----
+
+        At the moment qp can't handle tracking correctly, and so this
+        is implemented in this module in a slightly less graceful
+        manner. The position of the drive is checked at regular
+        intervals, and is corrected to keep an object within the beam
+        of the telescope, by simply driving forwards.
+
+        This allows a little more flexibility than keeping the drive
+        running continuously at slow speed, as we can track faster
+        moving objects, e.g. the sun, this way. However, tracking a
+        very fast-moving object is probably impractical (e.g. a
+        satellite), and would require something more robust.
         """
         
         #if tracking:
@@ -689,11 +715,32 @@ class Drive():
         #     command_str = "ts 0.0"
         #     self._command(command_str)
 
-        # current position
-        alt, az = self.el, self.az
-        if tracking:
-            #difference_alt = 
-            pass
+        # Set the tracking flag
+        self.tracking = True
+
+        # Set-up the threaded tracking process as a timer
+
+        self.tracking_thread = tracking.Timer(self._tracking, interval)
+        self.tracking_thread.start()
+
+    def stop_track():
+        """
+        Stop on-going tracking.
+        """
+        if self.tracking_thread:
+            self.tracking_thread.stop()
+            self.tracking = False
+            
+    def _tracking():
+        """This is the function which actually carries out the heavy lifting
+        required for the telescope tracking to work. It's not all that
+        sophisticated.
+        """
+
+        # Do not track if the telescope is still slewing
+        if not self.slewing:
+            self.goto(self.target)
+        
 
     def home(self):
         """
