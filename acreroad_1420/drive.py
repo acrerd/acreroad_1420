@@ -231,6 +231,9 @@ class Drive():
             self.listen_thread.daemon = True
             self.listen_thread.start()
 
+        self.track()
+        self.stop_track()
+
         
 
     @property
@@ -720,18 +723,18 @@ class Drive():
 
         # Set-up the threaded tracking process as a timer
 
-        self.tracking_thread = tracking.Timer(self._tracking, interval)
+        self.tracking_thread = threading.Timer(self._tracking, interval)
         self.tracking_thread.start()
 
-    def stop_track():
+    def stop_track(self):
         """
         Stop on-going tracking.
         """
-        if self.tracking_thread:
-            self.tracking_thread.stop()
-            self.tracking = False
+        
+        self.tracking_thread.cancel()
+        self.tracking = False
             
-    def _tracking():
+    def _tracking(self):
         """This is the function which actually carries out the heavy lifting
         required for the telescope tracking to work. It's not all that
         sophisticated.
