@@ -231,10 +231,10 @@ class Drive():
             self.listen_thread.daemon = True
             self.listen_thread.start()
 
+
         self.track()
         self.stop_track()
 
-        
 
     @property
     def current_time(self):
@@ -440,6 +440,7 @@ class Drive():
         #     return True
         # else:
         #     return False
+
         return self.slewing
             
     def _r2d(self, radians):
@@ -673,12 +674,9 @@ class Drive():
         command_str = "gh {0.az.radian:.2f} {0.alt.radian:.2f}".format(skycoord)
         # pass the slew-to command to the controller
         if self._command(command_str):
-            # self.slewing = True
-            pass
 
-            #print "Command received."
-            #self.slewing = True
-
+            print "Command received."
+            self.slewing = True
         else:
             self.slewing = True
             raise ControllerException("The telescope has failed to slew to the requested location")
@@ -734,6 +732,17 @@ class Drive():
         self.tracking_thread.cancel()
         self.tracking = False
             
+    def _tracking(self):
+        self.tracking_thread.start()
+
+    def stop_track(self):
+        """
+        Stop on-going tracking.
+        """
+        
+        self.tracking_thread.cancel()
+        self.tracking = False
+    
     def _tracking(self):
         """This is the function which actually carries out the heavy lifting
         required for the telescope tracking to work. It's not all that

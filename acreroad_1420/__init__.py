@@ -2,7 +2,7 @@
 
 __author__ = 'Daniel Williams'
 __email__ = 'mail@daniel-williams.co.uk'
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 __packagename__ = "acreroad_1420"
 
 from pkg_resources import resource_string, resource_stream, resource_filename
