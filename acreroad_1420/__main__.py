@@ -336,12 +336,10 @@ class commandButtons(QtGui.QWidget):
                         print("Already at that position.")
                         #self.targetPos = currentPos
                         self.parent().skymap.setTargetPos(currentPos)
-                        self.srt.setStatus(Status.READY)
                     else:
                         print("Slewing to " + str(targetPos))
-                        self.parent().srt.setStatus(Status.SLEWING)
                         self.parent().skymap.setTargetPos(targetPos)
-                        self.parent().srt.slew(targetPos)
+                        self.parent().drive.goto(targetPos)
                         #self.parent().skymap.setCurrentPos(targetPos)
                         #self.parent().updateStatusBar()
                 else:
@@ -355,17 +353,15 @@ class commandButtons(QtGui.QWidget):
         if self.trackToggle == TrackToggle.OFF:
             self.trackToggle = TrackToggle.ON
             print("Track Toggle ON")
-            self.parent().srt.drive.track()
-            self.parent().srt.setStatus(Status.TRACKING)
+            self.parent().drive.track()
         elif self.trackToggle == TrackToggle.ON:
             self.trackToggle = TrackToggle.OFF
             print("Track Toggle OFF")
-            self.parent().srt.drive.track(tracking=False)
-            self.parent().srt.setStatus(Status.READY)
+            self.parent().drive.track(tracking=False)
         self.parent().setFocus()
 
     def handleCalibrateButton(self):
-        self.parent().srt.calibrate()
+        self.parent().drive.calibrate()
         self.parent().setFocus()
 
     def getSlewToggle(self):
