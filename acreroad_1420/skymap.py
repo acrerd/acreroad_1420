@@ -86,7 +86,7 @@ class Skymap(QtGui.QWidget):
         if self.srt.getStatus() == Status.INIT:
             self.setTargetPos((self.srt.drive.az_home, self.srt.drive.el_home))
             targetPos = self.getTargetPos()
-            if self.srt.drive.slewSuccess(targetPos) == True:
+            if self.srt.drive.slewSuccess() == True:
                 self.srt.setStatus(Status.READY)
 
         if self.srt.getMode() == Mode.LIVE:
@@ -98,8 +98,12 @@ class Skymap(QtGui.QWidget):
 
         # potential problem here if the telescope never reaches its destination then the status will never be ready and a hard reset is required.
         if self.srt.getStatus() == Status.SLEWING:
-            if self.srt.drive.slewSuccess(targetPos) == True:
+            if self.srt.drive.slewSuccess() == True:
                 self.srt.setStatus(Status.READY)
+            else: 
+                pass
+                # This is a kludgy fix to remove make the need to reset the software 
+                #self.srt.setStatus(Status.READY)
 
         self.parent().antennaCoordsInfo.updateCoords()
         self.parent().antennaCoordsInfo.tick()
@@ -207,28 +211,33 @@ class Skymap(QtGui.QWidget):
         self.clickedSource = self.checkClickedSource((x,y),4)
         if self.clickedSource != 0:
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
-            if slewToggle == SlewToggle.ON and state != Status.SLEWING:
+            if slewToggle == SlewToggle.ON: # and state !=
+                # Status.SLEWING: Previously it was impossible to
+                # change the slew if the telescope was already
+                # slewing, the telescope firmware can now allow this,
+                # and so there is now real need to prevent the user
+                # from changing their mind.
                 self.targetPos = self.clickedSource.getPos()
         else:
             if slewToggle == SlewToggle.ON and state != Status.SLEWING:
                 self.targetPos = (x,y)
 
         if slewToggle == SlewToggle.ON:
-            if state != Status.SLEWING:
+            #if state != Status.SLEWING:
                 #self.targetPos = targetPos
-                if self.targetPos == currentPos:
-                    print("Already at that position.")
-                    self.targetPos = currentPos
-                    self.srt.setStatus(Status.READY)
-                else:
-                    print("Slewing to " + str(self.targetPos))
-                    self.srt.setStatus(Status.SLEWING)
-                    self.updateStatusBar()
-                    self.srt.slew(self.targetPos)
-                    #self.currentPos = targetPos
-                    self.updateStatusBar()
+            if self.targetPos == currentPos:
+                print("Already at that position.")
+                self.targetPos = currentPos
+                self.srt.setStatus(Status.READY)
             else:
-                print("Already Slewing.  Please wait until finished.")
+                print("Slewing to " + str(self.targetPos))
+                self.srt.setStatus(Status.SLEWING)
+                self.updateStatusBar()
+                self.srt.slew(self.targetPos)
+                #self.currentPos = targetPos
+                self.updateStatusBar()
+            #else:
+            #    print("Already Slewing.  Please wait until finished.")
         else:
             pass
 

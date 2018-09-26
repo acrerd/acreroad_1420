@@ -4,6 +4,7 @@ Author: Ronnie Frith
 Contact: frith.ronnie@gmail.com
 """
 
+from . import CONFIGURATION as config
 import time, astropy
 from astropy.time import Time
 from astropy import units as u
@@ -30,11 +31,11 @@ class Mode:
 
 class SRT():   
     def __init__(self,mode,device,calibrationSpeeds):
-        baud = 9600
+        baud = config.get('arduino', 'baud')
         if mode == Mode.SIM:
             self.drive = Drive(device,baud,simulate=1,calibration=calibrationSpeeds)
         elif mode == Mode.LIVE:
-            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=False)
+            self.drive = Drive(device,baud,simulate=0,calibration=calibrationSpeeds, persist=True)
         self.pos = self.azalt()
         self.getCurrentPos()
         self.location = self.drive.location  #TODO - use this
@@ -64,11 +65,12 @@ class SRT():
         -------
         SkyCoord : An astropy SkyCoord.
         """
-        position = self.getCurrentPos()
+        position = self.drive.status()#self.getCurrentPos()
         observatory = self.drive.location
         time = self.drive.current_time
-
-        coord = SkyCoord(AltAz(az = position[0]*u.degree, alt = position[1]*u.degree, obstime = time, location = observatory))
+        alt = position['alt']
+        if alt > 90 : alt = (360-alt)
+        coord = SkyCoord(AltAz(az = position['az']*u.degree, alt = alt *u.degree, obstime = time, location = observatory))
         return coord
         
         
@@ -129,7 +131,7 @@ class SRT():
         """
         Slews to position pos in degrees.
         """
-        delay = 0.05
+        delay = 0.1
         self.status = Status.SLEWING
             
         if self.mode == Mode.SIM:
@@ -199,7 +201,7 @@ class SRT():
         d = 0.5
         
         if targetPos.separation(realPos).value <= d:
-            #print("Finished slewing to " + str(self.getCurrentPos()))
+            print("Finished slewing to " + str(self.getCurrentPos()))
             return True
         else:
             return False

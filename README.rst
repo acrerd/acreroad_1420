@@ -16,6 +16,6 @@ Control, operation, and analysis code for the 1420 MHz telescope at the Acre Roa
 Features
 --------
 
-* TODO Incorporation of the GNU Radio blocks and code which has been written for the SRT
-* TODO Incorprotation of a GUI for the telescope drive control
-* TODO Creation of a GUI for the telescope receiver operation
+* Observation Scheduler.
+* Python API to the drive.
+* Skymap GUI to point the telescope.

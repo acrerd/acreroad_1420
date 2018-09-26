@@ -7,8 +7,12 @@ Author: Ronnie Frith
 Contact: frith.ronnie@gmail.com
 """
 
+from . import CONFIGURATION as config
+from . import CATALOGUE
+
+#from acreroad_1420 import CONFIGURATION as config
 import numpy as np
-import sys, argparse, ConfigParser, time
+import sys, argparse, time
 from PyQt4 import QtGui, QtCore
 from skymap import Skymap
 from srt import SRT, Status, Mode
@@ -48,7 +52,7 @@ class mainWindow(QtGui.QMainWindow):
         self.setFocus()
         self.srt = srt
         self.skymap = Skymap(self, time=srt.drive.current_time, location=srt.drive.location)
-        self.skymap.init_cat(catalogue) # this must be called to get the current position of srt to diplay it on the skymap.
+        self.skymap.init_cat(CATALOGUE) # this must be called to get the current position of srt to diplay it on the skymap.
 
         #self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.commandButtons = commandButtons(self)
@@ -409,9 +413,42 @@ def readConfigFile():
 
 def writeConfigFile():
     pass
-        
+    
 
-def run():
+def park():
+    """
+    A simple script to park the telescope in the stow position.
+    """
+    import sys
+
+    import time
+    import drive
+
+    device = config.get('arduino','dev')
+    print "Connecting to the drive" 
+    connection = drive.Drive(device, config.get("arduino", "baud"), simulate=0, homeonstart=False)
+    print "Connected"
+    
+    #connection.stow()
+
+    if sys.argv[1] == "snow":
+        # If we're parking due to snow we want to park in the home position
+        # to avoid the bowl filling with the white stuff
+        command = connection.home()
+        #while connection.homing ==True: 
+        #    print "Homing..."
+        #    time.sleep(1)
+
+    elif sys.argv[1] == "wind":
+        # If we're parking due to the wind then park in the stow position
+        # pointing straight up
+        connection._command(connection.vocabulary['STOW'])
+        time.sleep(1)
+        #connection.stow()
+
+    
+
+def main():
     app = QtGui.QApplication(sys.argv)
     parser = argparse.ArgumentParser()
     parser.add_argument('-live',dest='live',action='store_true',
@@ -424,20 +461,6 @@ def run():
         mode = Mode.SIM
     else:
         mode = Mode.LIVE
-
-    # parse the _simple_ config file
-    #config = ConfigParser.SafeConfigParser()
-    #config.read('settings.cfg')
-
-    home_dir = expanduser('~')
-    config_file_name = home_dir+"/.acreroad_1420/settings.cfg"
-
-    config =  ConfigParser.SafeConfigParser()
-    if isfile(config_file_name):
-        print "loading custom config file"
-        config.read(config_file_name)
-    else:
-        config.read('settings.cfg')
 
     device = config.get('arduino','dev')
     catalogue = config.get('catalogue','catfile')
@@ -453,7 +476,9 @@ def run():
     main.show()
     sys.exit(app.exec_())
 
-run()
+
+if __name__ == "__main__":
+    main()
 
    
  
