@@ -173,16 +173,16 @@ class Skymap(QtGui.QWidget):
             if slewToggle == SlewToggle.ON and not self.drive.slewing:
                 self.setTargetPos((x,y))
 
-        #if slewToggle == SlewToggle.ON:
+        if slewToggle == SlewToggle.ON:
 
-        if self.targetPos == currentPos:
-            print("Already at that position.")
-            self.setTargetPos(currentPos)
-        else:
-            print("Slewing to " + str(self.targetPos))
-            self.updateStatusBar()
-            self.drive.goto(self.targetPos)
-            self.updateStatusBar()
+            if self.targetPos == currentPos:
+                print("Already at that position.")
+                self.setTargetPos(currentPos)
+            else:
+                print("Slewing to " + str(self.targetPos))
+                self.updateStatusBar()
+                self.drive.goto(self.targetPos)
+                self.updateStatusBar()
 
 
         self.update()
