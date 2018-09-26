@@ -755,7 +755,8 @@ class Drive():
         self.homing = True
         command_str = "gH"
         self._command(command_str)
-        home_pos = SkyCoord(AltAz(self.el_home*u.deg,self.az_home*u.deg,obstime=self.current_time,location=self.location))
+        home_pos = SkyCoord(AltAz(alt=self.el_home*u.deg,
+                                  az=self.az_home*u.deg,obstime=self.current_time,location=self.location))
         self.target = home_pos
 
     def stow(self):
