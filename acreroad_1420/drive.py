@@ -115,7 +115,9 @@ class Drive():
             config.read(config_file_name)
         else:
             config.read('settings.cfg')
-                                    
+
+
+        self.config = config
         #
         # Fetch the sky position which corresponds to the 'home' position of the telescope
         #
@@ -312,6 +314,7 @@ class Drive():
             targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
             
         cx,cy = self.status()['az'], self.status()['alt']
+        print cx, cy
         realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
         d = 1.5
 
