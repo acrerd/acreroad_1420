@@ -39,10 +39,10 @@ class Skymap(QtGui.QWidget):
         self.location = location
         
         self.coordinateSystem = CoordinateSystem.AZEL # default coordinate system
-        self.srt = self.parent().getSRT()
+        self.drive = self.parent().drive
 
         #self.currentPos = (0,0) # this should always be in azel degrees
-        self.targetPos = self.getCurrentPos()#(0,0) # likewise
+        self.targetPos = self.drive.current_position
 
         self.radioSources = [] # the list of radio source from radiosources.cat
         self.galaxy = GalacticPlane(time = self.time, location=self.location)
@@ -52,9 +52,7 @@ class Skymap(QtGui.QWidget):
         """
         Required to set the initial pointing position, initial status and read in the contents of the source catalogue file.
         """
-        #self.currentPos = self.srt.getCurrentPos()
         self.readCatalogue(catalogue)
-        #self.srt.setStatus(Status.READY)
 
     def paintEvent(self, event):
         qp = QtGui.QPainter()
@@ -77,33 +75,7 @@ class Skymap(QtGui.QWidget):
     def updateSkymap(self):
         """
         """
-        targetPos = self.getTargetPos()
-        #if self.srt.getMode() == Mode.SIM:
-        #    self.setCurrentPos(self.srt.getCurrentPos())
-        #elif self.srt.getMode() == Mode.LIVE:
-        #    self.setCurrentPos(self.srt.azalt())
-
-        if self.srt.getStatus() == Status.INIT:
-            self.setTargetPos((self.srt.drive.az_home, self.srt.drive.el_home))
-            targetPos = self.getTargetPos()
-            if self.srt.drive.slewSuccess() == True:
-                self.srt.setStatus(Status.READY)
-
-        if self.srt.getMode() == Mode.LIVE:
-            self.setCurrentPos(self.srt.azalt())
-
-        if self.srt.getStatus() == Status.CALIBRATING:
-            if self.srt.drive.calibrating == False:
-                self.srt.setStatus(Status.READY)
-
-        # potential problem here if the telescope never reaches its destination then the status will never be ready and a hard reset is required.
-        if self.srt.getStatus() == Status.SLEWING:
-            if self.srt.drive.slewSuccess() == True:
-                self.srt.setStatus(Status.READY)
-            else: 
-                pass
-                # This is a kludgy fix to remove make the need to reset the software 
-                #self.srt.setStatus(Status.READY)
+        targetPos = self.targetPos
 
         self.parent().antennaCoordsInfo.updateCoords()
         self.parent().antennaCoordsInfo.tick()
@@ -111,11 +83,8 @@ class Skymap(QtGui.QWidget):
         if self.clickedSource != "" and type(self.clickedSource) != int:
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
 
-        if self.srt.getStatus() == Status.TRACKING:
-            source = self.getClickedSource() 
-            self.srt.track(source)
 
-        self.updateStatusBar()
+        #self.updateStatusBar()
         self.update()
         QtGui.QApplication.processEvents() # i _think_ this calls self.paintEvent()
         
@@ -123,49 +92,36 @@ class Skymap(QtGui.QWidget):
         """
         Update the status bar with the current SRT status.
         """
-        status = self.srt.getStatus()
-        if status == Status.INIT:
+        if not self.drive.ready:
             self.parent().updateStatusBar("Status: Initialising")
-        elif status == Status.SLEWING:
+        elif self.drive.slewing:
             self.parent().updateStatusBar("Status: Slewing")
-        elif status == Status.PARKED:
-            self.parent().updateStatusBar("Status: Parked")
-        elif status == Status.CALIBRATING:
+        # elif self.drive.
+        #     self.parent().updateStatusBar("Status: Parked")
+        elif self.drive.calibrating:
             self.parent().updateStatusBar("Status: Calibrating")
-        elif status == Status.READY:
+        elif self.drive.ready:
             self.parent().updateStatusBar("Status: Ready")
-        elif status == Status.TRACKING:
-            #sourceName = self.getClickedSource().getName()
+        elif self.drive.tracking:
             self.parent().updateStatusBar("Status: Tracking")
-                            
-    def setCurrentPos(self,pos):
-        self.srt.setCurrentPos(pos)
 
     def getCurrentPos(self):
-        return self.srt.getCurrentPos()
+        skycoord =  self.drive.current_position
+        return (skycoord.az.value, skycoord.alt.value)
 
     def setTargetPos(self,pos):
         if isinstance(pos, tuple):
-            self.targetPos = pos
-        else:
-            print "is skycoord"
-            now = Time.now()
-            altazframe = AltAz(obstime=now,location=self.location)
-            apos = pos.transform_to(altazframe)
-            xf, yf = apos.az.value, apos.alt.value
-            self.targetPos = (xf, yf)
+            pos = SkyCoord(AltAz(az=pos[0]*u.deg, alt=pos[1]*u.deg,
+                                 obstime=self.drive.current_time,
+                                 location=self.drive.location))
+        return pos
 
-    def getTargetPos(self):
-        return self.targetPos
 
     def getCoordinateSystem(self):
         return self.coordinateSystem()
 
     def setCoordinateSystem(self, coordsys):
         self.coordinateSystem = coordsys
-
-    def getClickedSource(self):
-        return self.clickedSource
 
     def setClickedSource(self,src):
         self.clickedSource = src
@@ -195,51 +151,37 @@ class Skymap(QtGui.QWidget):
         (cxf,cyf) = self.getCurrentPos()
 
         # in simulation mode, the coordinate are rounded to integers.
-        if self.srt.getMode() == Mode.SIM:
-            x = int(self.pixelToDegreeX(xf))
-            y = int(self.pixelToDegreeY(yf))
+        if self.drive.simulate:
+            x, y = self.pixelToDegree((xf, yf))
             currentPos = (int(cxf),int(cyf))
-        elif self.srt.getMode() == Mode.LIVE:
-            x = self.pixelToDegreeX(xf)
-            y = self.pixelToDegreeY(yf)
+        else:
+            x, y = self.pixelToDegree((xf, yf))
             currentPos = (cxf,cyf)
 
-        state = self.srt.getStatus()
         slewToggle = self.parent().commandButtons.getSlewToggle()
 
+        
 
         self.clickedSource = self.checkClickedSource((x,y),4)
         if self.clickedSource != 0:
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
-            if slewToggle == SlewToggle.ON: # and state !=
-                # Status.SLEWING: Previously it was impossible to
-                # change the slew if the telescope was already
-                # slewing, the telescope firmware can now allow this,
-                # and so there is now real need to prevent the user
-                # from changing their mind.
-                self.targetPos = self.clickedSource.getPos()
+            if slewToggle == SlewToggle.ON: 
+                self.setTargetPos(self.clickedSource.getPos())
         else:
-            if slewToggle == SlewToggle.ON and state != Status.SLEWING:
-                self.targetPos = (x,y)
+            if slewToggle == SlewToggle.ON and not self.drive.slewing:
+                self.setTargetPos((x,y))
 
-        if slewToggle == SlewToggle.ON:
-            #if state != Status.SLEWING:
-                #self.targetPos = targetPos
-            if self.targetPos == currentPos:
-                print("Already at that position.")
-                self.targetPos = currentPos
-                self.srt.setStatus(Status.READY)
-            else:
-                print("Slewing to " + str(self.targetPos))
-                self.srt.setStatus(Status.SLEWING)
-                self.updateStatusBar()
-                self.srt.slew(self.targetPos)
-                #self.currentPos = targetPos
-                self.updateStatusBar()
-            #else:
-            #    print("Already Slewing.  Please wait until finished.")
+        #if slewToggle == SlewToggle.ON:
+
+        if self.targetPos == currentPos:
+            print("Already at that position.")
+            self.setTargetPos(currentPos)
         else:
-            pass
+            print("Slewing to " + str(self.targetPos))
+            self.updateStatusBar()
+            self.drive.goto(self.targetPos)
+            self.updateStatusBar()
+
 
         self.update()
     
@@ -261,6 +203,7 @@ class Skymap(QtGui.QWidget):
         """
         Draws a crosshair (a vertial and horizontal line) at a position pos in degrees.
         """
+       
         x,y = self.degreeToPixel(pos)
         d = 5
         crosshairPen = QtGui.QPen(color,3,QtCore.Qt.SolidLine)
@@ -292,12 +235,14 @@ class Skymap(QtGui.QWidget):
         #sun.compute(obs)
         #x = float(repr(sun.az))*(180/math.pi)
         #y = float(repr(sun.alt))*(180/math.pi)
-        
-        qp.drawText(self.degreeToPixelX(az+10),self.degreeToPixelY(alt),"Sun")
-        qp.drawEllipse(self.degreeToPixelX(az),self.degreeToPixelY(alt),d,d)
+
+        labelPos = self.degreeToPixel(az+10, alt)
+        ellipsePos = self.degreeToPixel(az, alt)
+        qp.drawText(labelPos[0], labelPos[1],"Sun")
+        qp.drawEllipse(ellipsePos[0], ellipsePos[1],d,d)
         
         qp.setPen(yellowSunPen)
-        qp.drawEllipse(self.degreeToPixelX(az),self.degreeToPixelY(alt),d-2,d-2)
+        qp.drawEllipse(ellipsePos[0], ellipsePos[1],d-2,d-2)
 
     def drawObject(self,qp,posd,desc):
         """
@@ -377,14 +322,14 @@ class Skymap(QtGui.QWidget):
             # Azimuth
             nlines = 18
             for i in range(1,nlines+1):
-                j = self.degreeToPixelX(i * (360.0/nlines))
+                j = self.degreeToPixel((i * (360.0/nlines), 0))[0]
                 qp.drawLine(j,1,j,h-1)
                 qp.drawText(j-20,h-1,str(i*20))
                 
             # Elevation
             nlines = 9
             for i in reversed(range(1,nlines+1)):
-                j = self.degreeToPixelY(i * (90.0/nlines))
+                j = self.degreeToPixel((0, i * (90.0/nlines)))[1]
                 qp.drawLine(1,j,w-1,j)
                 qp.drawText(w-20,j-10,str(i*10))
 
@@ -405,27 +350,25 @@ class Skymap(QtGui.QWidget):
             #j = i + 1
             #if pix[i][0]<pix[j][0]: continue # avoids drawing a line across the screen when the plane crosses the wrap-over.
             qp.drawEllipse(pix[i][0], pix[i][1],1,1) #, pix[j][0], pix[j][1])
-                
-    def degreeToPixelX(self,deg):
-        (xs,ys,w,h) = self.sceneSize
-        return deg * (w/360.0)
 
-    def pixelToDegreeX(self,pixel):
-        (xs,ys,w,h) = self.sceneSize
-        return pixel * (360.0/w)
 
-    def degreeToPixel(self,deg):
-        (xs,ys,w,h) = self.sceneSize
-        x,y = deg
-        return (x*(w/360.0),(90.0-y)*(h/90.0))
+    def degreeToPixel(self, pos):
+        """
+        Convert a location in degrees to a pixel location on the skymap.
+        
+        Parameters
+        ----------
+        pos : tuple or `SkyCoord`
+           The azimuth and altitude in degrees, as a tuple, or
+           the skycoordinate object.
+        """       
+        if isinstance(pos, SkyCoord):
+            pos = (pos.az.value, pos.alt.value)
+            
+        (xs, ys, w, h) = self.sceneSize
+        x, y = pos
+        return (x*(w/360.0), (90.0-y)*(h/90.0))
 
-    def degreeToPixelY(self,deg):
-        (xs,ys,w,h) = self.sceneSize
-        return (90.0-deg) * (h/90.0)
-
-    def pixelToDegreeY(self,pixel):
-        (xs,ys,w,h) = self.sceneSize
-        return (h-pixel) * (90.0/h)
 
     def pixelToDegree(self,pixel):
         (xs,ys,w,h) = self.sceneSize
@@ -455,22 +398,19 @@ class Skymap(QtGui.QWidget):
                 src = RadioSource("Sun")
                 src.sun()
                 self.radioSources.append(src)
-                print(line + " - OK.")
             elif name.lower() == "moon":
                 src = RadioSource("Moon")
                 src.moon()
                 self.radioSources.append(src)
-                print(line + " - OK.")
             else:
                 src = RadioSource(name)
                 chk = src.lookupAstropy()
                 if chk == True:
                     # found the source online
                     if src.getExists() == True:
-                        print(line + " - OK.")
                         self.radioSources.append(src)
                     else:
-                        print(line + " - Fail.")
+                        pass
                 else:
                     # can't find source online - maybe internet is down - use radec coords if supplied
                     lineList = line.rstrip().split()
@@ -478,10 +418,9 @@ class Skymap(QtGui.QWidget):
                         name = lineList[0]
                         ra = lineList[1]
                         dec = lineList[2]
-                        print(name,ra,dec)
                         # what if the source name ias a space e.g. cass A
                     else:
-                        print(line + " - Fail.")
+                        pass
         f.close()
 
     

@@ -9,6 +9,7 @@ Contact: frith.ronnie@gmail.com
 
 from . import CONFIGURATION as config
 from . import CATALOGUE
+from .drive import Drive
 
 #from acreroad_1420 import CONFIGURATION as config
 import numpy as np
@@ -43,18 +44,20 @@ class mainWindow(QtGui.QMainWindow):
 
     cursorkeys = [QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]
     
-    def __init__(self, srt, catalogue, parent=None):
+    def __init__(self, drive, catalogue, parent=None):
         super(mainWindow,self).__init__(parent=parent)
         screen = QtGui.QDesktopWidget().screenGeometry()        
         #self.showMaximized()
         self.setGeometry(50,50,700,450)
         self.setWindowTitle("SRT Drive Control")
         self.setFocus()
-        self.srt = srt
-        self.skymap = Skymap(self, time=srt.drive.current_time, location=srt.drive.location)
-        self.skymap.init_cat(CATALOGUE) # this must be called to get the current position of srt to diplay it on the skymap.
 
-        #self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.drive = drive
+        
+        self.skymap = Skymap(self, time=self.drive.current_time, location=self.drive.location)
+        self.skymap.init_cat(CATALOGUE)
+        
+
         self.commandButtons = commandButtons(self)
         self.antennaCoordsInfo = antennaCoordsInfo(self)
         self.sourceInfo = sourceInfo(self)
@@ -65,55 +68,14 @@ class mainWindow(QtGui.QMainWindow):
         
         self.sourceTimer = QtCore.QTimer(self)
         self.sourceTimer.timeout.connect(self.skymap.fetchRadioSourceCoordinates)
-        self.sourceTimer.start(60000)
-
-
-    # def keyPressEvent(self, event):
-    #     print("Key press")
-    #     if event.isAutoRepeat():
-    #         return
-
-    #     key = event.key()
-    #     print(key)
-        
-    #     if key == QtCore.Qt.Key_Left:
-    #         self.srt.drive.move('west')
-    #         self.updateStatusBar("Driving West")
-    #     if key == QtCore.Qt.Key_Up:
-    #         self.srt.drive.move('up')
-    #     if key == QtCore.Qt.Key_Down:
-    #         self.srt.drive.move('down')
-    #     if key == QtCore.Qt.Key_Right:
-    #         self.srt.drive.move('east')
-    #     if key == QtCore.Qt.Key_A:
-    #         self.srt.drive.change_offset("azimuth", -self.OFFSET_CHANGE)
-    #         self.updateStatusBar("Azimuth nudged to {}".format(self.srt.drive.az_abs))
-    #     if key == QtCore.Qt.Key_S:
-    #         self.srt.drive.change_offset("altitude", -self.OFFSET_CHANGE)
-    #     if key == QtCore.Qt.Key_D:
-    #         self.srt.drive.change_offset("azimuth", self.OFFSET_CHANGE)
-    #     if key == QtCore.Qt.Key_W:
-    #         self.srt.drive.change_offset("altitude", self.OFFSET_CHANGE)
-    #     event.accept()
-
-    # def keyReleaseEvent(self, event):
-    #     if event.isAutoRepeat(): return
-    #     pressed = event.key()
-    #     if pressed in self.cursorkeys:
-    #         # Stop the motors as soon as the key is released
-    #         self.srt.drive.panic()
-    #     event.accept()
-        
+        self.sourceTimer.start(60000)      
         
     def updateStatusBar(self,status):
         """
         Update the text of the status bar with the string status.
         """
         self.statusBar().showMessage(str(status))
-        
-    def getSRT(self):
-        return self.srt
-
+    
     def setMode(self,mode):
         self.mode = mode
 
@@ -134,9 +96,13 @@ class antennaCoordsInfo(QtGui.QWidget):
         gb.setFixedSize(screen.width(),200)
         layout = QtGui.QHBoxLayout(self)
         #self.setLayout(layout)
-        position = self.parent().getSRT().skycoord()
+        position = self.parent().drive.current_position
         
-        self.posLabel = QtGui.QLabel(" <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>Az</span>: " + "%.2f %.2f" % self.parent().getSRT().getCurrentPos())
+        self.posLabel = QtGui.QLabel(
+            """<span style='font-family:mono,fixed; 
+            background: black; font-size:8pt; font-weight:600; 
+            color:#dddddd;'>
+            AltAz</span>: {0.alt:.2f} {0.az:.2f} """.format(self.parent().drive.current_position))
         layout.addWidget(self.posLabel)
 
         self.radecLabel = QtGui.QLabel("Ra Dec: {0.ra:.2f} {0.dec:.2f}".format( position.transform_to('icrs')  ))
@@ -159,7 +125,7 @@ class antennaCoordsInfo(QtGui.QWidget):
         """
         Update is called when the on screen antenna coordinate information should be updated to new values.
         """
-        currentPos = self.parent().getSRT().skycoord()
+        currentPos = self.parent().drive.skycoord()
         self.posLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.az.value:.2f}</span> <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd; left: -5px;'>az</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.alt.value:.2f}</span>  <span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>alt</span>".format(currentPos))
         self.radecLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.ra.value:.2f}<span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>ra</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.dec.value:.2f}</span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>dec</span>" .format(currentPos.transform_to('icrs')))
         self.galLabel.setText("<span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.l.value:.2f}<span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lon</span> <span style='font-family:mono,fixed; background: black; font-size:12pt; font-weight:600; color:#ffffff;'>{0.b.value:.2f}</span><span style='font-family:mono,fixed; background: black; font-size:8pt; font-weight:600; color:#dddddd;'>lat</span>".format(currentPos.transform_to('galactic')))
@@ -292,7 +258,7 @@ class commandButtons(QtGui.QWidget):
         """
         #current_az = self.srt.getCurrentPos()[0]
         self.parent().skymap.setTargetPos((0,90))
-        self.parent().srt.stow()
+        self.parent().drive.stow()
         self.parent().setFocus()
 
     def handleHomeButton(self):
@@ -301,8 +267,8 @@ class commandButtons(QtGui.QWidget):
         """
         #homeOffset = self.getOffset().split()
         #self.parent().skymap.setTargetPos((float(homeOffset[0]),float(homeOffset[1])))
-        self.parent().skymap.setTargetPos((self.parent().srt.drive.az_home,self.parent().srt.drive.el_home))
-        self.parent().srt.home()
+        self.parent().skymap.setTargetPos((self.parent().drive.az_home,self.parent().drive.el_home))
+        self.parent().drive.home()
         self.parent().setFocus()
 
     def handleSlewButton(self):
@@ -329,7 +295,7 @@ class commandButtons(QtGui.QWidget):
         elif (not ho[0]=='') and (not ho[1]==''):
             # Parsing a horizontal coordinate
             ho[0], ho[1] = np.float(ho[0]), np.float(ho[1])
-            c = SkyCoord(AltAz(ho[0]*u.deg, ho[1]*u.deg, obstime=self.parent().srt.drive.current_time, location=self.parent().srt.drive.location))
+            c = SkyCoord(AltAz(ho[0]*u.deg, ho[1]*u.deg, obstime=self.parent().drive.current_time, location=self.parent().drive.location))
             
         elif (not ga[0]=='') and (not ga[1]==''):
             # Parsing a galactic coordinate
@@ -361,10 +327,10 @@ class commandButtons(QtGui.QWidget):
             skycoord = self._parseInput(result)
             if skycoord:
                 #self.parent().srt.slew(self.parent().skymap,(azf,elf))
-                currentPos = self.parent().srt.getCurrentPos()
+                currentPos = self.parent().drive.skycoord()
                 targetPos = skycoord
                 print targetPos
-                state = self.parent().srt.drive.skycoord()
+                state = self.parent().drive.skycoord()
                 if state != Status.SLEWING:
                     if targetPos == currentPos:
                         print("Already at that position.")
@@ -469,9 +435,12 @@ def main():
     #calibrationSpeeds = (cs.split()[0],cs.split()[1])
     #print(calibrationSpeeds.split()[0],calibrationSpeeds.split()[1])
 
-    srt = SRT(mode,device,calibrationSpeeds)
-    main = mainWindow(srt,catalogue)
-    #main.commandButtons.setOffset(homeOffset) # this is not the way to do this.
+    if mode == Mode.SIM:
+        drive = Drive(simulate=1,calibration=calibrationSpeeds)
+    elif mode == Mode.LIVE:
+        drive = Drive(simulate=0,calibration=calibrationSpeeds, persist=True)
+    
+    main = mainWindow(drive,catalogue)
 
     main.show()
     sys.exit(app.exec_())

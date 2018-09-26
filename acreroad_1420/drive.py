@@ -107,7 +107,7 @@ class Drive():
     #stat_format = re.compile(r"\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*:|$)")
     stat_format = re.compile(r"(?=\s+)([\w_]+)\s*=\s*([\d_:\.T]+)")
     
-    def __init__(self, device, baud, timeout=3, simulate=0, calibration=None, location=None, persist=True, homeonstart=True):
+    def __init__(self, device=None, baud=None, timeout=3, simulate=0, calibration=None, location=None, persist=True, homeonstart=True):
         """
         Software designed to drive the 1420 MHz telescope on the roof of the
         Acre Road observatory. This class interacts with "qp", the telescope
@@ -142,19 +142,8 @@ class Drive():
         
         """
 
-        #
-        # Configuration settings are kept in a config file
-        #
 
-        home_dir = expanduser('~')
-        config_file_name = home_dir+"/.acreroad_1420/settings.cfg"
-
-        config = self.config = ConfigParser.SafeConfigParser()
-        if isfile(config_file_name):
-            config.read(config_file_name)
-        else:
-            config.read('settings.cfg')
-
+        self.targetPos = (0,0)
 
         self.config = config
 
@@ -189,7 +178,7 @@ class Drive():
             location = EarthLocation(lat=float(observatory[0])*u.deg, lon=float(observatory[1])*u.deg, height=float(observatory[2])*u.m)
 
 
-        self.sim = simulate
+        self.sim = self.simulate = simulate
         self.timeout = timeout
         self.location = location
 
@@ -199,8 +188,12 @@ class Drive():
         # when disconnected and reconnected, so a search is
         # required. This is now handled by the `_openconnection()`
         # method.
+        if not baud:
+            # Get the target baudrate from the config file
+            baud = config.get("arduino", "baud")
+        
         if not device:
-            device = CONFIGURATION.get('arduino','dev')
+            device = config.get('arduino','dev')
         
         if not self.sim:
             self._openconnection(device, baud)
@@ -242,6 +235,7 @@ class Drive():
             self.listen_thread.daemon = True
             self.listen_thread.start()
 
+        self.ready = True
 
         self.track()
         self.stop_track()
@@ -311,6 +305,7 @@ class Drive():
                 print str(e)
                 logging.error("Parser error, continuing. \n {}".format(line))
         time.sleep(0.5)
+        return
 
     def _stat_update(self, az, alt):
         self.az, self.alt = az, alt
@@ -419,49 +414,26 @@ class Drive():
         else: pass
         
 
-    def slewSuccess(self,):
+    def slewSuccess(self):
         """
         Checks if the slew has completed. This /should/ now be 
         entirely handled by qp, and all we need to do is to 
         check that the slewing flag is false.
         """
-        if type(targetPos) is tuple:
-            (cx, cy) = targetPos
+        if type(self.targetPos) is tuple:
+            (cx, cy) = self.targetPos
             #if cx > 90.0: cx -= (cx - 90) 
-            targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
+            self.targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
             
         cx,cy = self.status()['az'], self.status()['alt']
         print cx, cy
-        realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
-        d = 1.5
+        self.realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
+        d = 0.5 * u.degree
 
-        #return (not self.slewing)
-        
-        # if type(targetPos) is tuple:
-        #     (cx, cy) = targetPos
-        #     #if cx > 90.0: cx -= (cx - 90) 
-        #     targetPos = SkyCoord(AltAz(cx*u.deg,cy*u.deg,obstime=self.current_time,location=self.location))
-            
-        # cx,cy = self.status()['az'], self.status()['alt']
-        # try:
-        #     realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
-        # except Exception as e:
-        #     print str(e)
-        #     pass
-        #     #print cx, cy
-        # d = 1.5
-
-        # #print targetPos
-        # #print realPos
-        # #print targetPos.separation(realPos).value
-        
-        # if targetPos.separation(realPos).value <= d:
-        #     #print("Finished slewing to " + str(self.getCurrentPos()))
-        #     return True
-        # else:
-        #     return False
-
-        return self.slewing
+        if self.targetPos.separation(self.realPos) < d:
+            return True
+        else:
+            return False
             
     def _r2d(self, radians):
         """
@@ -798,8 +770,15 @@ class Drive():
 
     def skycoord(self):
         cx,cy = self.status()['az'], self.status()['alt']
-        realPos = SkyCoord(AltAz(az=cx*u.deg,alt=cy*u.deg,obstime=self.current_time,location=self.location))
+        realPos = SkyCoord(AltAz(az=cx*u.deg, alt=cy*u.deg,
+                                 obstime=self.current_time,
+                                 location=self.location))
+        return realPos
 
+    @property
+    def current_position(self):
+        return self.skycoord()
+    
 
     def status(self):
         """
