@@ -330,20 +330,16 @@ class commandButtons(QtGui.QWidget):
                 currentPos = self.parent().drive.skycoord()
                 targetPos = skycoord
                 print targetPos
-                state = self.parent().drive.skycoord()
-                if state != Status.SLEWING:
-                    if targetPos == currentPos:
+                if targetPos == currentPos:
                         print("Already at that position.")
                         #self.targetPos = currentPos
                         self.parent().skymap.setTargetPos(currentPos)
-                    else:
+                else:
                         print("Slewing to " + str(targetPos))
                         self.parent().skymap.setTargetPos(targetPos)
                         self.parent().drive.goto(targetPos)
                         #self.parent().skymap.setCurrentPos(targetPos)
                         #self.parent().updateStatusBar()
-                else:
-                    print("Already Slewing.  Please wait until finished.")
         self.parent().setFocus()
                 
     def handleTrackButton(self):

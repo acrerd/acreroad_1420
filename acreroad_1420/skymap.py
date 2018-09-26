@@ -114,6 +114,8 @@ class Skymap(QtGui.QWidget):
             pos = SkyCoord(AltAz(az=pos[0]*u.deg, alt=pos[1]*u.deg,
                                  obstime=self.drive.current_time,
                                  location=self.drive.location))
+
+        self.drawTargetPosCrosshair(qp)
         return pos
 
 
