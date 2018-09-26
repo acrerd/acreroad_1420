@@ -35,18 +35,23 @@ class Skymap(QtGui.QWidget):
         p.setColor(self.backgroundRole(), QtGui.QColor("white"))
         self.setPalette(p)
 
+        self.targetPosition = None
+
         self.time = time
         self.location = location
         
         self.coordinateSystem = CoordinateSystem.AZEL # default coordinate system
         self.drive = self.parent().drive
 
-        #self.currentPos = (0,0) # this should always be in azel degrees
-        self.targetPos = self.drive.current_position
-
         self.radioSources = [] # the list of radio source from radiosources.cat
         self.galaxy = GalacticPlane(time = self.time, location=self.location)
         self.clickedSource = ""  # name of last clicked source
+
+    def targetPos(self):
+        """
+        The target position of the drive.
+        """
+        return (self.drive.targetPos.az.value, self.drive.targetPos.alt.value)
 
     def init_cat(self,catalogue):
         """
@@ -75,7 +80,7 @@ class Skymap(QtGui.QWidget):
     def updateSkymap(self):
         """
         """
-        targetPos = self.targetPos
+        targetPos = self.targetPos()
 
         self.parent().antennaCoordsInfo.updateCoords()
         self.parent().antennaCoordsInfo.tick()
@@ -175,13 +180,13 @@ class Skymap(QtGui.QWidget):
 
         if slewToggle == SlewToggle.ON:
 
-            if self.targetPos == currentPos:
+            if self.targetPos() == currentPos:
                 print("Already at that position.")
                 self.setTargetPos(currentPos)
             else:
-                print("Slewing to " + str(self.targetPos))
+                print("Slewing to " + str(self.targetPos()))
                 self.updateStatusBar()
-                self.drive.goto(self.targetPos)
+                self.drive.goto(self.targetPos())
                 self.updateStatusBar()
 
 
@@ -199,7 +204,7 @@ class Skymap(QtGui.QWidget):
         Wrapper function for drawing the chosen target direction crosshair.
         """
         color = QtGui.QColor('green')
-        self.drawCrosshair(self.targetPos,color,qp)
+        self.drawCrosshair(self.targetPos(),color,qp)
 
     def drawCrosshair(self,pos,color,qp):
         """

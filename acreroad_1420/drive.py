@@ -143,8 +143,6 @@ class Drive():
         """
 
 
-        self.targetPos = (0,0)
-
         self.config = config
 
         # Setup the logger
@@ -181,6 +179,8 @@ class Drive():
         self.sim = self.simulate = simulate
         self.timeout = timeout
         self.location = location
+
+        self.targetPos = SkyCoord(AltAz(self.az_abs*u.deg,self.el_abs*u.deg,obstime=self.current_time,location=self.location))
 
         #
         # Initialise the connection to the arduino Note that this can
