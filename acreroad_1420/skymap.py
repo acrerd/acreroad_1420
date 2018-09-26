@@ -115,7 +115,7 @@ class Skymap(QtGui.QWidget):
                                  obstime=self.drive.current_time,
                                  location=self.drive.location))
 
-        self.drawTargetPosCrosshair(qp)
+        self.updateSkymap()
         return pos
 
 
