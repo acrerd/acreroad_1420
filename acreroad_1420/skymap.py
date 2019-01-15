@@ -35,7 +35,7 @@ class Skymap(QtGui.QWidget):
         p.setColor(self.backgroundRole(), QtGui.QColor("white"))
         self.setPalette(p)
 
-        self.targetPosition = None
+        self.target_position = None
 
         self.time = time
         self.location = location
@@ -47,11 +47,25 @@ class Skymap(QtGui.QWidget):
         self.galaxy = GalacticPlane(time = self.time, location=self.location)
         self.clickedSource = ""  # name of last clicked source
 
-    def targetPos(self):
+    def targetPos(self, tup=False):
         """
         The target position of the drive.
+
+        Parameters
+        ----------
+        tup : bool
+        Return a pair in the format (azimuth, altitude) in degrees rather than a skycoordinate object.
         """
-        return (self.drive.targetPos.az.value, self.drive.targetPos.alt.value)
+        # Check if there /is/ a target position first.
+        # At initialisation there won't be, and `self.target_position` will have a value of
+        # `None`, which will confuse things later on.
+        if not self.target_position:
+            return None
+
+        if tup:
+            return (self.target_position.az.value, self.target_position.alt.value)
+        else:
+            return self.target_position
 
     def init_cat(self,catalogue):
         """
@@ -119,7 +133,7 @@ class Skymap(QtGui.QWidget):
             pos = SkyCoord(AltAz(az=pos[0]*u.deg, alt=pos[1]*u.deg,
                                  obstime=self.drive.current_time,
                                  location=self.drive.location))
-
+            self.target_position = pos
         self.updateSkymap()
         return pos
 
@@ -171,10 +185,13 @@ class Skymap(QtGui.QWidget):
 
         self.clickedSource = self.checkClickedSource((x,y),4)
         if self.clickedSource != 0:
+            # Check if the click is on a pre-programmed object rather than an arbitrary location
+            # in the sky
             self.parent().sourceInfo.updateEphemLabel(self.clickedSource)
             if slewToggle == SlewToggle.ON: 
                 self.setTargetPos(self.clickedSource.getPos())
         else:
+            # Otherwise use the arbitrary sky location
             if slewToggle == SlewToggle.ON and not self.drive.slewing:
                 self.setTargetPos((x,y))
 
@@ -202,9 +219,17 @@ class Skymap(QtGui.QWidget):
     def drawTargetPosCrosshair(self,qp):
         """
         Wrapper function for drawing the chosen target direction crosshair.
+        
+        Parameters
+        ----------
+        qp : `qp` object of some sort.
+           The base class for the GUI.
+
         """
         color = QtGui.QColor('green')
-        self.drawCrosshair(self.targetPos(),color,qp)
+        if self.targetPos() != None:
+            # Only attempt to draw the crosshair if a target is defined.
+            self.drawCrosshair(self.targetPos(),color,qp)
 
     def drawCrosshair(self,pos,color,qp):
         """

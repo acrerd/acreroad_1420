@@ -308,10 +308,41 @@ class Drive():
         return
 
     def _stat_update(self, az, alt):
+        """
+        Update the internal record of the telescope's position.
+        This is normally parsed from one of the status strings by the parser 
+        method.
+
+        Parameters
+        ----------
+        az : float, degrees
+           The azimuth of the telescope.
+           This must be provided in degrees.
+        alt : float, degrees
+           The altitude of the telescope.
+           This must also be provided in degrees.
+        
+        Returns
+        -------
+        None
+        
+        Notes
+        -----
+        Due to oddities in how the telescope seems to be reporting the 
+        altitude, this function currently calculates the appropriate modulus
+        for the altitude if it is greater than 90 deg.
+        
+        This should really be looked into more carefully.
+
+        * TODO Investigate erratic altitude reports.
+        """
+        
+        # Check that the values are within an acceptable range
+        # Otherwise modulate them.
+        if az > 360 : az = az % 360
+        if alt > 90 : alt = alt % 90
+
         self.az, self.alt = az, alt
-        #if self.slewSuccess():
-        #    self.slewing = False
-        #    self.homing = False
             
     def parse(self, string):
         #print string
